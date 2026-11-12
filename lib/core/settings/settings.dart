@@ -1,5 +1,4 @@
 import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
-import 'package:chord_pro/chord_pro.dart' show AccidentalPreference;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,25 +13,29 @@ class AppSettingsState {
   const AppSettingsState({
     this.themeMode = ThemeMode.system,
     this.instrument = Instrument.guitar,
-    this.accidentals = AccidentalPreference.sharps,
+    this.detectBareChords = true,
     this.textScale = 1,
   });
 
   final ThemeMode themeMode;
   final Instrument instrument;
-  final AccidentalPreference accidentals;
+
+  /// Whether chords without `< >` brackets — Ultimate-Guitar-style
+  /// chord-only lines and bare chord words — are detected as chords.
+  final bool detectBareChords;
+
   final double textScale;
 
   AppSettingsState copyWith({
     ThemeMode? themeMode,
     Instrument? instrument,
-    AccidentalPreference? accidentals,
+    bool? detectBareChords,
     double? textScale,
   }) {
     return AppSettingsState(
       themeMode: themeMode ?? this.themeMode,
       instrument: instrument ?? this.instrument,
-      accidentals: accidentals ?? this.accidentals,
+      detectBareChords: detectBareChords ?? this.detectBareChords,
       textScale: textScale ?? this.textScale,
     );
   }
@@ -41,7 +44,7 @@ class AppSettingsState {
 class SettingsController extends Notifier<AppSettingsState> {
   static const _themeKey = 'settings.themeMode';
   static const _instrumentKey = 'settings.instrument';
-  static const _accidentalsKey = 'settings.accidentals';
+  static const _detectBareKey = 'settings.detectBareChords';
   static const _textScaleKey = 'settings.textScale';
 
   SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
@@ -54,9 +57,7 @@ class SettingsController extends Notifier<AppSettingsState> {
       instrument: prefs.getString(_instrumentKey) == 'ukulele'
           ? Instrument.ukulele
           : Instrument.guitar,
-      accidentals: prefs.getString(_accidentalsKey) == 'flats'
-          ? AccidentalPreference.flats
-          : AccidentalPreference.sharps,
+      detectBareChords: prefs.getBool(_detectBareKey) ?? true,
       textScale: (prefs.getDouble(_textScaleKey) ?? 1).clamp(0.7, 2.0),
     );
   }
@@ -71,9 +72,9 @@ class SettingsController extends Notifier<AppSettingsState> {
     _prefs.setString(_instrumentKey, instrument.name);
   }
 
-  void setAccidentals(AccidentalPreference accidentals) {
-    state = state.copyWith(accidentals: accidentals);
-    _prefs.setString(_accidentalsKey, accidentals.name);
+  void setDetectBareChords(bool enabled) {
+    state = state.copyWith(detectBareChords: enabled);
+    _prefs.setBool(_detectBareKey, enabled);
   }
 
   void setTextScale(double scale) {

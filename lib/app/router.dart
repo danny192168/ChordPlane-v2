@@ -10,7 +10,6 @@ import '../features/settings/settings_screen.dart';
 import '../features/sharing/cpl.dart';
 import '../features/sharing/import_screen.dart';
 import '../features/songs/presentation/artist_screen.dart';
-import '../features/songs/presentation/artists_screen.dart';
 import '../features/songs/presentation/song_editor_screen.dart';
 import '../features/songs/presentation/song_viewer_screen.dart';
 import 'app_shell.dart';
@@ -101,11 +100,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) =>
             SongEditorScreen(songId: state.pathParameters['id']),
-      ),
-      GoRoute(
-        path: '/artists',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const ArtistsScreen(),
       ),
       GoRoute(
         path: '/artist/:slug',

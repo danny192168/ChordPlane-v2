@@ -135,7 +135,7 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
         body: song.body,
         originalKey: song.originalKey,
         transpose: _transpose,
-        accidentals: settings.accidentals,
+        detectBare: settings.detectBareChords,
       )),
     );
     final theme = Theme.of(context);
@@ -399,7 +399,6 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
   Future<void> _openTransposeSheet(ChordDocument current) async {
     _ticker.muted = true;
     var offset = _transpose;
-    final settings = ref.read(settingsProvider);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -413,7 +412,6 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
                 : _transposeKeyLabel(
                     ref.read(songProvider(widget.songId)).value,
                     offset,
-                    settings,
                   );
 
             void change(int next) {
@@ -524,18 +522,10 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
     _ticker.muted = false;
   }
 
-  String _transposeKeyLabel(
-    SongRow? song,
-    int offset,
-    AppSettingsState settings,
-  ) {
+  String _transposeKeyLabel(SongRow? song, int offset) {
     if (song == null) return '';
-    return ChordDocument.build(
-      body: '',
-      originalKey: song.originalKey,
-      transpose: offset,
-      accidentals: settings.accidentals,
-    ).displayKey;
+    // A direct root transpose — no document parsing per slider frame.
+    return ChordDocument.transposeKeyLabel(song.originalKey, offset);
   }
 
   Future<void> _openTextSheet() async {
@@ -717,7 +707,10 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
     if (_pointers.length != 2 || _pinchStartDistance <= 0) return;
     final ratio = _pinchDistance() / _pinchStartDistance;
     if ((ratio - 1).abs() < 0.004) return;
-    final next = (_pinchStartScale * ratio).clamp(0.7, 2.0);
+    // Quantize to 5% steps: rebuilding the whole sheet every pointer frame
+    // is what made pinch-to-zoom feel laggy.
+    final raw = (_pinchStartScale * ratio).clamp(0.7, 2.0);
+    final next = (raw / 0.05).roundToDouble() * 0.05;
     if ((next - _fontScale).abs() < 0.01) return;
     setState(() => _fontScale = next);
   }

@@ -98,27 +98,31 @@ class SongSheet extends StatelessWidget {
 
       if (section.kind == SectionKind.chorus) {
         children.add(
-          Container(
-            padding: const EdgeInsets.only(left: 12),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.35),
-                  width: 3,
+          RepaintBoundary(
+            child: Container(
+              padding: const EdgeInsets.only(left: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                    width: 3,
+                  ),
                 ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: blocks,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: blocks,
+              ),
             ),
           ),
         );
       } else {
         children.add(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: blocks,
+          RepaintBoundary(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: blocks,
+            ),
           ),
         );
       }
@@ -168,7 +172,7 @@ class SongSheet extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final units = _unitsFor(line);
+    final units = unitsForLine(line);
     if (units.isEmpty) {
       return SizedBox(height: lyricSize * 1.35);
     }
@@ -223,96 +227,6 @@ class SongSheet extends StatelessWidget {
       ),
     );
   }
-
-  List<_Unit> _unitsFor(Line line) {
-    final units = <_Unit>[];
-    String? pendingChord;
-
-    for (final token in line.tokens) {
-      switch (token) {
-        case ChordToken():
-          if (pendingChord != null) {
-            units.add(_Unit(chord: pendingChord, text: ''));
-          }
-          pendingChord = token.chord?.raw ?? token.raw;
-        case TextToken():
-          final chunks = _splitIntoWordChunks(token.text);
-          if (chunks.isEmpty) continue;
-          for (var i = 0; i < chunks.length; i++) {
-            final isFirst = i == 0;
-            if (chunks.length == 1 && chunks[i].trim().isEmpty) {
-              if (pendingChord != null) {
-                units.add(_Unit(chord: pendingChord, text: chunks[i]));
-                pendingChord = null;
-              } else if (units.isNotEmpty) {
-                units.last.text += chunks[i];
-              }
-              continue;
-            }
-            units.add(
-              _Unit(chord: isFirst ? pendingChord : null, text: chunks[i]),
-            );
-            if (isFirst) pendingChord = null;
-          }
-        case AnnotationToken():
-          units.add(_Unit(chord: pendingChord, text: '*${token.text}'));
-          pendingChord = null;
-        case ChordRecallToken():
-          break;
-        case InlineDirectiveToken():
-          break;
-      }
-    }
-
-    if (pendingChord != null) {
-      units.add(_Unit(chord: pendingChord, text: ''));
-    }
-    return units;
-  }
-
-  /// Splits a lyric token into word chunks while keeping the spaces that
-  /// surround them, so wrapping never inserts stray gaps.
-  static List<String> _splitIntoWordChunks(String text) {
-    final chunks = <String>[];
-    var index = 0;
-    while (index < text.length) {
-      final leadingStart = index;
-      while (index < text.length && _isSpace(text.codeUnitAt(index))) {
-        index++;
-      }
-      final leading = text.substring(leadingStart, index);
-      if (index >= text.length) {
-        if (chunks.isEmpty) {
-          chunks.add(leading);
-        } else {
-          chunks[chunks.length - 1] += leading;
-        }
-        break;
-      }
-      final wordStart = index;
-      while (index < text.length && !_isSpace(text.codeUnitAt(index))) {
-        index++;
-      }
-      final word = text.substring(wordStart, index);
-      final trailingStart = index;
-      while (index < text.length && _isSpace(text.codeUnitAt(index))) {
-        index++;
-      }
-      final trailing = text.substring(trailingStart, index);
-      chunks.add('$leading$word$trailing');
-    }
-    return chunks;
-  }
-
-  static bool _isSpace(int codeUnit) =>
-      codeUnit == 0x20 || codeUnit == 0x09 || codeUnit == 0x0A;
-}
-
-class _Unit {
-  _Unit({this.chord, required this.text});
-
-  final String? chord;
-  String text;
 }
 
 class _ChordUnit extends StatelessWidget {
@@ -324,7 +238,7 @@ class _ChordUnit extends StatelessWidget {
     required this.onChordTap,
   });
 
-  final _Unit unit;
+  final SheetUnit unit;
   final TextStyle chordStyle;
   final TextStyle lyricStyle;
   final double chordRowHeight;

@@ -4,10 +4,12 @@ import 'package:chord_plane/core/settings/settings.dart';
 import 'package:chord_plane/features/library/library_screen.dart';
 import 'package:chord_plane/features/songs/data/song_repository.dart';
 import 'package:chord_plane/features/songs/presentation/song_viewer_screen.dart';
+import 'package:chord_plane/features/songs/presentation/artist_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Boots the real database, repositories and providers against in-memory
@@ -36,6 +38,37 @@ void main() {
     );
   }
 
+  /// Like [wrap], but with a real GoRouter so screens can push routes —
+  /// the artists-first library opens artist pages via `context.push`.
+  Widget wrapRouted() {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const LibraryScreen()),
+        GoRoute(
+          path: '/artist/:slug',
+          builder: (context, state) =>
+              ArtistScreen(slug: state.pathParameters['slug']!),
+        ),
+        GoRoute(
+          path: '/song/:id',
+          builder: (context, state) =>
+              SongViewerScreen(songId: state.pathParameters['id']!),
+        ),
+      ],
+    );
+    return ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(database),
+        sharedPreferencesProvider.overrideWithValue(preferences),
+      ],
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: ChordPlaneTheme.light(),
+      ),
+    );
+  }
+
   /// Pumps frames until [finder] matches. Never use `pumpAndSettle` while a
   /// [CircularProgressIndicator] can be on screen: it spins forever.
   Future<void> pumpUntil(
@@ -55,6 +88,23 @@ void main() {
     fail('Timed out waiting for $finder');
   }
 
+  /// The favorited song keeps its filled heart across filters, so filter
+  /// switches are verified by waiting for the un-hearted songs to vanish.
+  Future<void> pumpUntilAbsent(
+    WidgetTester tester,
+    Finder finder, {
+    int frames = 100,
+  }) async {
+    for (var i = 0; i < frames; i++) {
+      await tester.pump(const Duration(milliseconds: 40));
+      if (finder.evaluate().isEmpty) {
+        await tester.pump(const Duration(milliseconds: 100));
+        return;
+      }
+    }
+    fail('Timed out waiting for $finder to disappear');
+  }
+
   /// The default 800x600 test window cuts off the bottom sheets, so give the
   /// tests a phone-sized viewport.
   void phoneViewport(WidgetTester tester) {
@@ -71,24 +121,32 @@ void main() {
     await tester.pump(const Duration(milliseconds: 20));
   }
 
-  testWidgets('library seeds demo songs and filters favorites', (
-    tester,
-  ) async {
+  testWidgets('library lists artists and filters favorites', (tester) async {
     phoneViewport(tester);
-    await tester.pumpWidget(wrap(const LibraryScreen()));
+    await tester.pumpWidget(wrapRouted());
+    await pumpUntil(tester, find.text('Traditional'));
+
+    // The default view surfaces songs through their artists. All three
+    // demo songs share one artist.
+    expect(find.text('Traditional'), findsOneWidget);
+    expect(find.text('3 songs'), findsOneWidget);
+
+    // Open the artist and heart the first song.
+    await tester.tap(find.text('Traditional'));
     await pumpUntil(tester, find.text('Amazing Grace'));
 
-    expect(find.text('Amazing Grace'), findsOneWidget);
-    expect(find.text('Scarborough Fair'), findsOneWidget);
-    expect(find.text('House of the Rising Sun'), findsOneWidget);
-
-    // Heart the first song, then switch to the favorites filter.
     await tester.tap(find.byIcon(Icons.favorite_border).first);
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pump(const Duration(milliseconds: 200));
 
+    // Back to the library, then switch to the favorites filter.
+    await tester.pageBack();
+    await tester.pump(const Duration(milliseconds: 300));
+
     await tester.tap(find.widgetWithText(ChoiceChip, 'Favorites'));
-    await pumpUntil(tester, find.byIcon(Icons.favorite));
+    // The favorited song shows a filled heart in every filter, so wait for
+    // the filter switch itself: the un-hearted songs must disappear.
+    await pumpUntilAbsent(tester, find.text('Scarborough Fair'));
 
     expect(find.text('Amazing Grace'), findsOneWidget);
     expect(find.text('Scarborough Fair'), findsNothing);

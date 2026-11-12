@@ -67,7 +67,13 @@ class ChordPlaneColors extends ThemeExtension<ChordPlaneColors> {
 }
 
 class ChordPlaneTheme {
-  static const seed = Color(0xFF6C5CE7);
+  /// Brand palette (grayish navy):
+  ///   Navy 900 ink     #16283B
+  ///   Navy 700 primary #3D5A80
+  ///   Slate 500        #6B809A
+  ///   Steel 300        #A9C0D6
+  ///   Mist 100         #E8EEF4
+  static const seed = Color(0xFF3D5A80);
 
   static ThemeData light() => _build(Brightness.light);
 
@@ -78,14 +84,18 @@ class ChordPlaneTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: brightness,
-      dynamicSchemeVariant: DynamicSchemeVariant.vibrant,
+      // Tonal spot keeps the scheme muted and gray-navy instead of pushing
+      // the seed into a saturated blue.
+      dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
-      splashFactory: InkSparkle.splashFactory,
+      // InkSparkle compiles shaders on every tap and is a well-known source
+      // of jank on mid-range Android devices; InkRipple is much cheaper.
+      splashFactory: InkRipple.splashFactory,
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: scheme.surface,
@@ -169,21 +179,21 @@ class ChordPlaneTheme {
       extensions: [
         isDark
             ? const ChordPlaneColors(
-                chord: Color(0xFFB7AEFF),
-                chordSurface: Color(0xFF232138),
-                sectionLabel: Color(0xFF9C93CF),
-                stage: Color(0xFF08080C),
-                diagramGrid: Color(0xFFE9E6FF),
-                diagramDot: Color(0xFFE9E6FF),
-                diagramFingerText: Color(0xFF121016),
+                chord: Color(0xFFA9C2DE),
+                chordSurface: Color(0xFF1C2836),
+                sectionLabel: Color(0xFF7E9BBB),
+                stage: Color(0xFF0A0E14),
+                diagramGrid: Color(0xFFD9E2EC),
+                diagramDot: Color(0xFFD9E2EC),
+                diagramFingerText: Color(0xFF101820),
               )
             : const ChordPlaneColors(
-                chord: Color(0xFF5243C9),
-                chordSurface: Color(0xFFEEEAFF),
-                sectionLabel: Color(0xFF6C5CE7),
-                stage: Color(0xFFF6F4FF),
-                diagramGrid: Color(0xFF2B2838),
-                diagramDot: Color(0xFF2B2838),
+                chord: Color(0xFF3D5A80),
+                chordSurface: Color(0xFFE7EDF3),
+                sectionLabel: Color(0xFF52709A),
+                stage: Color(0xFFF5F7FA),
+                diagramGrid: Color(0xFF2C3E54),
+                diagramDot: Color(0xFF2C3E54),
                 diagramFingerText: Color(0xFFFFFFFF),
               ),
       ],

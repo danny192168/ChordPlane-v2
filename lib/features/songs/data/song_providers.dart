@@ -1,4 +1,3 @@
-import 'package:chord_pro/chord_pro.dart' show AccidentalPreference;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/chords/chord_document.dart';
@@ -6,11 +5,11 @@ import '../../../core/settings/settings.dart';
 import '../../../core/db/app_database.dart';
 import 'song_repository.dart';
 
-enum LibraryFilter { all, favorites }
+enum LibraryFilter { artists, favorites }
 
 class LibraryFilterController extends Notifier<LibraryFilter> {
   @override
-  LibraryFilter build() => LibraryFilter.all;
+  LibraryFilter build() => LibraryFilter.artists;
 
   void set(LibraryFilter filter) => state = filter;
 }
@@ -74,7 +73,7 @@ typedef ChordViewKey = ({
   String body,
   String originalKey,
   int transpose,
-  AccidentalPreference accidentals,
+  bool detectBare,
 });
 
 final chordDocumentProvider = Provider.family<ChordDocument, ChordViewKey>((
@@ -85,6 +84,6 @@ final chordDocumentProvider = Provider.family<ChordDocument, ChordViewKey>((
     body: key.body,
     originalKey: key.originalKey,
     transpose: key.transpose,
-    accidentals: key.accidentals,
+    detectBare: key.detectBare,
   );
 });

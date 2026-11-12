@@ -150,11 +150,15 @@ class SongListEmpty extends StatelessWidget {
     required this.title,
     required this.message,
     this.action,
+    this.leading,
   });
 
   final String title;
   final String message;
   final Widget? action;
+
+  /// Optional branding shown above the icon, e.g. the app logo.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +167,10 @@ class SongListEmpty extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(28, 56, 28, 28),
       child: Column(
         children: [
+          if (leading != null) ...[
+            leading!,
+            const SizedBox(height: 24),
+          ],
           Icon(
             Icons.music_note_rounded,
             size: 44,

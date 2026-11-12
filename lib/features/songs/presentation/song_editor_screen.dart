@@ -42,8 +42,6 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
       _load();
     } else {
       _loading = false;
-      _body.text = _starterBody.trim();
-      _key.text = 'G';
     }
   }
 
@@ -99,6 +97,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     }
 
     final theme = Theme.of(context);
+    final settings = ref.watch(settingsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -152,7 +151,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                     controller: _key,
                     textCapitalization: TextCapitalization.characters,
                     decoration: const InputDecoration(
-                      labelText: 'Key',
+                      labelText: 'Key (optional)',
                       hintText: 'G, Am, F#m',
                     ),
                   ),
@@ -234,10 +233,35 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              value: settings.detectBareChords,
+              onChanged: (value) =>
+                  ref.read(settingsProvider.notifier).setDetectBareChords(value),
+              title: const Text(
+                'Detect chords without < >',
+                style: TextStyle(fontSize: 14),
+              ),
+              subtitle: const Text(
+                'Ultimate-Guitar-style chords, picked up automatically',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 4),
             Text(
-              'Put chords in brackets right before the syllable: [Am]Hello world. '
-              'Use {start_of_verse: Verse 1} … {end_of_verse} to add sections.',
+              settings.detectBareChords
+                  ? 'Chords can be wrapped in < > — <G> or a whole progression '
+                      'like <G D Em C> — or written ChordPro-style: [Am]Hello '
+                      'world. Chord-only lines above lyrics (Ultimate Guitar '
+                      'format) are detected too. Use {start_of_verse: Verse 1} '
+                      '… {end_of_verse} to add sections.'
+                  : 'Bare chord detection is off, so wrap your chords in '
+                      '< > — e.g. <G> or <G D Em C> — right before the '
+                      'syllable. ChordPro [Am] brackets work too. Use '
+                      '{start_of_verse: Verse 1} … {end_of_verse} to add '
+                      'sections.',
               style: TextStyle(
                 fontSize: 12,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -261,6 +285,8 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 ),
                 decoration: const InputDecoration(
                   alignLabelWithHint: true,
+                  labelText: 'Lyrics & chords',
+                  // Placeholder only — nothing to delete before typing.
                   hintText:
                       '{start_of_verse: Verse 1}\n'
                       '[G]Amazing grace, how [C]sweet the sound\n'
@@ -293,7 +319,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
         body: _body.text,
         originalKey: _key.text,
         transpose: 0,
-        accidentals: settings.accidentals,
+        detectBare: settings.detectBareChords,
       )),
     );
 
@@ -434,16 +460,4 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     if (!mounted) return;
     context.go('/');
   }
-
-  static const _starterBody = '''
-{start_of_verse: Verse 1}
-[G]Your first line goes here
-[C]The second line follows
-{end_of_verse}
-
-{start_of_chorus: Chorus}
-[G]Sing the part everyone remembers
-[D]Then bring it back home
-{end_of_chorus}
-''';
 }

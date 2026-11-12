@@ -1,5 +1,4 @@
 import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
-import 'package:chord_pro/chord_pro.dart' show AccidentalPreference;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -90,41 +89,19 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const _SectionLabel('Chord spelling'),
+          const _SectionLabel('Chord input'),
           _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
-                  child: Text(
-                    'Use sharps or flats when transposing. ChordPlane follows the song key where it can.',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<AccidentalPreference>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(
-                          value: AccidentalPreference.sharps,
-                          label: Text('Sharps (C♯)'),
-                        ),
-                        ButtonSegment(
-                          value: AccidentalPreference.flats,
-                          label: Text('Flats (D♭)'),
-                        ),
-                      ],
-                      selected: {settings.accidentals},
-                      onSelectionChanged: (value) =>
-                          controller.setAccidentals(value.first),
-                    ),
-                  ),
-                ),
-              ],
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              value: settings.detectBareChords,
+              onChanged: controller.setDetectBareChords,
+              title: const Text('Detect chords without < >'),
+              subtitle: const Text(
+                'Ultimate-Guitar-style chord lines above lyrics and bare '
+                'chord words are picked up as chords. Turn this off if '
+                'lyrics are misread, and wrap chords in < > instead — '
+                'e.g. <G> or <G D Em C>.',
+              ),
             ),
           ),
           const SizedBox(height: 20),
