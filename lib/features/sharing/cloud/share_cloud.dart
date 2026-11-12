@@ -99,7 +99,11 @@ class SupabaseShareApi implements ShareCloudApi {
   @override
   Future<void> upsertShare(ShareRecord record) async {
     try {
-      await _client.from(_table).upsert(record.toRow(), onConflict: 'token');
+      // RLS requires owner = auth.uid(); the record itself is user-agnostic,
+      // so stamp the signed-in user here.
+      final row = record.toRow()
+        ..['owner'] = _client.auth.currentUser?.id;
+      await _client.from(_table).upsert(row, onConflict: 'token');
     } on SocketException {
       throw const ShareCloudException(
         ShareCloudError.network,

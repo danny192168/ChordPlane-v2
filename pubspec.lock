@@ -454,7 +454,7 @@ packages:
     source: hosted
     version: "18.1.4"
   gotrue:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: gotrue
       sha256: cca816226824160e40d149816fd89740cc64dda1eaa3d9161e334330b18bba89

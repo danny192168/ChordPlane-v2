@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -17,6 +16,40 @@ final authClientProvider = Provider<GoTrueClient>((ref) {
     throw StateError(AppConfig.supabaseInitError ?? 'Cloud is not configured.');
   }
   return Supabase.instance.client.auth;
+});
+
+/// The sign-in operations the gate needs, so widget tests can fake behavior
+/// without touching the network (TestWidgetsFlutterBinding blocks sockets).
+abstract interface class SignInApi {
+  Future<AuthResponse> signIn(String email, String password);
+
+  Future<AuthResponse> signUp(String email, String password);
+
+  Future<void> signOut();
+}
+
+class SupabaseSignInApi implements SignInApi {
+  const SupabaseSignInApi();
+
+  GoTrueClient get _auth => Supabase.instance.client.auth;
+
+  @override
+  Future<AuthResponse> signIn(String email, String password) =>
+      _auth.signInWithPassword(email: email, password: password);
+
+  @override
+  Future<AuthResponse> signUp(String email, String password) =>
+      _auth.signUp(email: email, password: password);
+
+  @override
+  Future<void> signOut() => _auth.signOut();
+}
+
+final signInApiProvider = Provider<SignInApi>((ref) {
+  if (AppConfig.supabaseInitError != null || !AppConfig.hasSupabase) {
+    throw StateError(AppConfig.supabaseInitError ?? 'Cloud is not configured.');
+  }
+  return const SupabaseSignInApi();
 });
 
 /// Modal sign-in gate shown when an action requires a cloud account.
@@ -49,7 +82,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
   String? _message;
   bool _messageIsError = true;
 
-  GoTrueClient get _auth => ref.read(authClientProvider);
+  SignInApi get _api => ref.read(signInApiProvider);
 
   @override
   void dispose() {
@@ -176,7 +209,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
     try {
       if (_createAccount) {
         final response = await _authCall(
-          () => _auth.signUp(email: email, password: password),
+          () => _api.signUp(email, password),
         );
         if (!mounted) return;
         if (response.session == null) {
@@ -189,9 +222,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
         if (mounted) Navigator.of(context).pop();
         return;
       }
-      await _authCall(
-        () => _auth.signInWithPassword(email: email, password: password),
-      );
+      await _authCall(() => _api.signIn(email, password));
       if (mounted) Navigator.of(context).pop();
     } on AuthException catch (error) {
       debugPrint('Auth failed: ${error.message}');

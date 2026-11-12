@@ -1,13 +1,14 @@
 import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/auth/auth_gateway.dart';
 import '../../core/config/app_config.dart';
 import '../../core/settings/settings.dart';
 import '../sharing/cloud/auth_gate_sheet.dart';
 import '../songs/data/song_repository.dart';
+import 'network_diagnostics.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -178,6 +179,15 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 _AccountTile(),
+                if (kDebugMode) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.network_check),
+                    title: const Text('Network diagnostics'),
+                    subtitle: const Text('DNS → TCP → HTTPS, with timings'),
+                    onTap: () => NetworkDiagnosticsSheet.show(context),
+                  ),
+                ],
               ],
             ),
           ),
@@ -214,7 +224,7 @@ class _AccountTile extends ConsumerWidget {
     }
     if (AppConfig.supabaseInitError != null) {
       return ListTile(
-        leading: const Icon(Icons.cloud_alert_outlined),
+        leading: const Icon(Icons.cloud_off_outlined),
         title: const Text('Cloud setup failed'),
         subtitle: Text(AppConfig.supabaseInitError!),
       );
@@ -235,9 +245,7 @@ class _AccountTile extends ConsumerWidget {
       title: Text('Signed in as $email'),
       subtitle: const Text('Cloud share links enabled'),
       trailing: TextButton(
-        onPressed: () async {
-          await Supabase.instance.client.auth.signOut();
-        },
+        onPressed: () => ref.read(signInApiProvider).signOut(),
         child: const Text('Sign out'),
       ),
     );
