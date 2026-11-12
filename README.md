@@ -1,8 +1,8 @@
 # ChordPlane
 
 A guitar-first chord and lyric songbook for iOS and Android. Songs are stored in
-[ChordPro](https://www.chordpro.org/) and live on the device; cloud sync and
-Clerk accounts arrive in a later phase.
+[ChordPro](https://www.chordpro.org/) and live on the device; the cloud is a
+sync/mailbox layer (Supabase), never the source of truth.
 
 ## What works today (Phase 1, local-only)
 
@@ -22,6 +22,11 @@ Clerk accounts arrive in a later phase.
   Self-contained: chords and lyrics travel in the link, so no server is needed.
   Import from a pasted link/code, the clipboard, or a `.cpl` file; songs already
   in the library are reused instead of duplicated.
+- **Cloud links (opt-in)** — with Supabase configured, sharing also creates a
+  short server link (`https://chordplane.citcs.site/s/<token>`): no size limit,
+  a clean QR code, and viewable/importable without the app. Creating a link
+  requires signing in (email + password); viewing never does. Shares created
+  offline are queued and uploaded when connectivity returns.
 - **Settings** — light/dark/system theme, instrument, sharp/flat spelling, text
   size, and a one-tap demo pack of public-domain songs.
 - **Search** — matches titles, artists, lyrics, and tags.
@@ -33,13 +38,30 @@ without a rewrite.
 ## Sharing format
 
 `.cpl` files are pretty-printed JSON with a `format` marker
-(`chordplane.cpl/1`). Links and QR codes carry the same JSON, gzipped and
-base64url-encoded: `https://chordplane.app/c/<code>`. The app registers the
-`chordplane://c/<code>` scheme, so cold-start links open the import screen
-directly and pre-fill the code. HTTPS links start opening the app once
-`chordplane.app` serves an `assetlinks.json` (Android) and an
-`apple-app-site-association` file (iOS); until then they can be pasted into
-Import.
+(`chordplane.cpl/1`). Inline links and QR codes carry the same JSON, gzipped and
+base64url-encoded: `https://chordplane.app/c/<code>`. Server-backed links carry
+only a token: `https://chordplane.citcs.site/s/<token>`. The app registers the
+`chordplane://` scheme, so cold-start links open the import screen directly
+and pre-fill the code. HTTPS links start opening the app once the link host
+serves an `assetlinks.json` (Android) and an `apple-app-site-association`
+file (iOS); until then they can be pasted into Import.
+
+## Cloud setup (optional)
+
+The app is fully functional without any backend. To enable cloud share links:
+
+1. Create a Supabase project and run `supabase/migrations/0001_shared_bundles.sql`
+   in its SQL editor.
+2. Build/run with the project credentials:
+
+```sh
+flutter run \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
+```
+
+Auth: email + password sign-in is enabled by default; magic-link and social
+providers can be added in the Supabase dashboard later.
 
 ## Running
 

@@ -110,14 +110,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/import',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) =>
-            ImportScreen(initialCode: state.uri.queryParameters['d']),
+        builder: (context, state) => ImportScreen(
+          initialCode: state.uri.queryParameters['d'],
+          initialToken: state.uri.queryParameters['s'],
+        ),
       ),
       GoRoute(
         path: '/c/:code',
         parentNavigatorKey: rootNavigatorKey,
         redirect: (context, state) =>
             '/import?d=${Uri.encodeComponent(state.pathParameters['code']!)}',
+      ),
+      GoRoute(
+        path: '/s/:token',
+        parentNavigatorKey: rootNavigatorKey,
+        redirect: (context, state) =>
+            '/import?s=${Uri.encodeComponent(state.pathParameters['token']!)}',
       ),
     ],
   );

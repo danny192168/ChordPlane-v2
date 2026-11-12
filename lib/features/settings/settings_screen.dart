@@ -1,8 +1,12 @@
 import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/auth/auth_gateway.dart';
+import '../../core/config/app_config.dart';
 import '../../core/settings/settings.dart';
+import '../sharing/cloud/auth_gate_sheet.dart';
 import '../songs/data/song_repository.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -173,13 +177,7 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.cloud_off_outlined),
-                  title: Text('Local mode'),
-                  subtitle: Text(
-                    'Songs live on this device. Clerk accounts and cloud sync arrive in the next step.',
-                  ),
-                ),
+                _AccountTile(),
               ],
             ),
           ),
@@ -197,6 +195,50 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AccountTile extends ConsumerWidget {
+  const _AccountTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!AppConfig.hasSupabase) {
+      return const ListTile(
+        leading: Icon(Icons.cloud_off_outlined),
+        title: Text('Local mode'),
+        subtitle: Text('Cloud sharing is not enabled in this build.'),
+      );
+    }
+    if (AppConfig.supabaseInitError != null) {
+      return ListTile(
+        leading: const Icon(Icons.cloud_alert_outlined),
+        title: const Text('Cloud setup failed'),
+        subtitle: Text(AppConfig.supabaseInitError!),
+      );
+    }
+    final signedIn = ref.watch(signedInProvider).value ?? false;
+    if (!signedIn) {
+      return ListTile(
+        leading: const Icon(Icons.person_add_alt_1_outlined),
+        title: const Text('Sign in'),
+        subtitle: const Text('Needed for cloud share links'),
+        onTap: () => showSignInGate(context),
+      );
+    }
+    final gateway = ref.read(authGatewayProvider);
+    final email = gateway.currentUserEmail ?? 'your account';
+    return ListTile(
+      leading: const Icon(Icons.person_outline),
+      title: Text('Signed in as $email'),
+      subtitle: const Text('Cloud share links enabled'),
+      trailing: TextButton(
+        onPressed: () async {
+          await Supabase.instance.client.auth.signOut();
+        },
+        child: const Text('Sign out'),
       ),
     );
   }

@@ -7,13 +7,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_theme.dart';
+import '../../../core/config/app_config.dart';
 import 'cpl.dart';
+import 'cloud/server_share_service.dart';
+import 'cloud/share_cloud.dart';
 import 'share_service.dart';
 
 class ImportScreen extends ConsumerStatefulWidget {
-  const ImportScreen({super.key, this.initialCode});
+  const ImportScreen({super.key, this.initialCode, this.initialToken});
 
   final String? initialCode;
+
+  /// Token of a server-backed share (`/s/<token>` links arrive here).
+  final String? initialToken;
 
   @override
   ConsumerState<ImportScreen> createState() => _ImportScreenState();
@@ -29,6 +35,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   @override
   void initState() {
     super.initState();
+    final token = widget.initialToken?.trim();
+    if (token != null && token.isNotEmpty) {
+      _fetchServerShare(token);
+      return;
+    }
     final code = widget.initialCode?.trim();
     if (code != null && code.isNotEmpty) {
       _controller.text = code;
@@ -80,7 +91,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               height: 1.4,
             ),
             decoration: const InputDecoration(
-              hintText: 'chordplane://c/…  or  https://chordplane.app/c/…',
+              hintText:
+                  'chordplane://c/…  ·  https://chordplane.citcs.site/s/…',
               alignLabelWithHint: true,
             ),
           ),
@@ -151,7 +163,56 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       _loadJson(raw);
       return;
     }
+    // Server-backed links carry only a token — resolve over the network.
+    final token = CplFormat.extractServerToken(raw);
+    if (token != null) {
+      await _fetchServerShare(token);
+      return;
+    }
     await _loadCode(raw);
+  }
+
+  Future<void> _fetchServerShare(String token) async {
+    if (!AppConfig.hasSupabase) {
+      setState(
+        () => _error =
+            'Cloud links are not available in this build. Use a .cpl '
+            'file or an inline share code instead.',
+      );
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await ref.read(serverShareServiceProvider).fetch(token);
+      if (!mounted) return;
+      if (result == null) {
+        setState(
+          () => _error =
+              'That link has expired, was removed, or never existed.',
+        );
+        return;
+      }
+      setState(() {
+        _bundle = result.bundle;
+      });
+    } on ShareCloudException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _bundle = null;
+        _error = error.message;
+      });
+    } on CplException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _bundle = null;
+        _error = error.message;
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _loadCode(String raw) async {

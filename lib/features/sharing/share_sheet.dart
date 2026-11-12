@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/theme/app_theme.dart';
+import '../../../core/config/app_config.dart';
+import '../../../core/auth/auth_gateway.dart';
 import 'cpl.dart';
+import 'cloud/auth_gate_sheet.dart';
+import 'cloud/server_share_service.dart';
+import 'cloud/share_cloud.dart';
 import 'share_service.dart';
 
 /// Largest share code that still produces a comfortably scannable QR code.
@@ -34,14 +41,18 @@ class _ShareSheet extends ConsumerStatefulWidget {
 class _ShareSheetState extends ConsumerState<_ShareSheet> {
   bool _busy = false;
 
+  /// Set once a cloud share exists; its link is then shown like an inline one.
+  String? _serverToken;
+
   CplBundle get bundle => widget.bundle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = ChordPlaneColors.of(context);
-    final link = bundle.toLink();
-    final showQr = link.length <= qrCodeLimit;
+    final signedIn = ref.watch(signedInProvider).value ?? false;
+    final inlineLink = bundle.toLink();
+    final showQr = inlineLink.length <= qrCodeLimit;
 
     return SafeArea(
       top: false,
@@ -88,6 +99,26 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
               ],
             ),
             const SizedBox(height: 18),
+            if (AppConfig.hasSupabase) ...[
+              _CloudLinkSection(
+                bundle: bundle,
+                signedIn: signedIn,
+                busy: _busy,
+                serverToken: _serverToken,
+                onCreate: _createServerLink,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'OFFLINE OPTIONS',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  letterSpacing: 1.1,
+                  fontWeight: FontWeight.w800,
+                  color: colors.sectionLabel,
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
             if (showQr)
               Center(
                 child: Container(
@@ -102,7 +133,7 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
                     ),
                   ),
                   child: QrImageView(
-                    data: link,
+                    data: inlineLink,
                     version: QrVersions.auto,
                     size: 216,
                     gapless: true,
@@ -188,7 +219,7 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
                 ),
               ),
               child: Text(
-                link,
+                inlineLink,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -229,6 +260,29 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
     }
   }
 
+  Future<void> _createServerLink() async {
+    setState(() => _busy = true);
+    try {
+      final result = await ref
+          .read(serverShareServiceProvider)
+          .share(bundle);
+      if (!mounted) return;
+      setState(() => _serverToken = result.token);
+      if (result.upload == ShareUpload.queued) {
+        _snack('Saved offline — the link goes live once you are back online.');
+      }
+    } on SignInRequiredException {
+      if (!mounted) return;
+      await showSignInGate(context);
+    } on ShareCloudException catch (error) {
+      _snack(error.message);
+    } catch (error) {
+      _snack('Could not create the link: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _shareLink() async {
     setState(() => _busy = true);
     try {
@@ -261,8 +315,203 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
   }
 }
 
-class _NoticeCard extends StatelessWidget {
-  const _NoticeCard({required this.icon, required this.text});
+/// The cloud section of the share sheet: sign-in prompt, create button, and
+/// the short server link once one exists.
+class _CloudLinkSection extends StatelessWidget {
+  const _CloudLinkSection({
+    required this.bundle,
+    required this.signedIn,
+    required this.busy,
+    required this.serverToken,
+    required this.onCreate,
+  });
+
+  final CplBundle bundle;
+  final bool signedIn;
+  final bool busy;
+  final String? serverToken;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = ChordPlaneColors.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colors.chord.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cloud_outlined, size: 19, color: colors.chord),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'CLOUD LINK',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w800,
+                    color: colors.sectionLabel,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'A short link anyone can open — no app needed to view, and no '
+            'size limit. Your snapshot stays frozen after you send it.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (AppConfig.supabaseInitError != null)
+            Text(
+              AppConfig.supabaseInitError!,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: theme.colorScheme.error,
+              ),
+            )
+          else if (serverToken != null) ...[
+            _ServerLinkCard(token: serverToken!),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: busy ? null : onCreate,
+                icon: const Icon(Icons.link, size: 19),
+                label: Text(
+                  signedIn ? 'Create cloud link' : 'Sign in to create a link',
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The created server link with copy / send / QR actions.
+class _ServerLinkCard extends StatelessWidget {
+  const _ServerLinkCard({required this.token});
+
+  final String token;
+
+  @override
+  Widget build(BuildContext context) {
+    final link = CplFormat.serverLink(token);
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Text(
+            link,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 12.5,
+              height: 1.35,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: link));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Link copied')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.copy, size: 17),
+                label: const Text('Copy'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () async {
+                  await SharePlus.instance.share(
+                    ShareParams(
+                      text: 'Open in ChordPlane:\n$link',
+                      subject: 'ChordPlane link',
+                      sharePositionOrigin: _boxOrigin(context),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.send_outlined, size: 18),
+                label: const Text('Send'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: QrImageView(
+              data: link,
+              version: QrVersions.auto,
+              size: 150,
+              gapless: true,
+              backgroundColor: Colors.white,
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Color(0xFF14121A),
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: Color(0xFF14121A),
+              ),
+              semanticsLabel: 'QR code for the cloud link',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Rect _boxOrigin(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return Rect.zero;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+}
+
+class _NoticeCard extends StatelessWidget {  const _NoticeCard({required this.icon, required this.text});
 
   final IconData icon;
   final String text;

@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
+import '../../core/config/app_config.dart';
+
 /// ChordPlane's portable, plain-JSON song/setlist format (`.cpl`).
 ///
 /// The same envelope is used for files, share links and QR codes:
@@ -32,6 +34,45 @@ class CplFormat {
   static const String version = 'chordplane.cpl/1';
   static const String linkHost = 'https://chordplane.app';
   static const String customScheme = 'chordplane';
+
+  /// Server-backed share links are shorter than inline codes because the
+  /// bundle lives on the backend and the link only carries the token.
+  static String serverLink(String token) =>
+      '${AppConfig.shareHost}/s/$token';
+
+  /// Pulls the token out of `https://…/s/<token>`, `chordplane://s/<token>`,
+  /// or a bare token. Returns null for inline `/c/` links and other text.
+  static String? extractServerToken(String raw) {
+    final input = raw.trim();
+    if (input.isEmpty) return null;
+    final uri = Uri.tryParse(input);
+    if (uri != null && uri.hasScheme) {
+      final segments = uri.pathSegments;
+      final index = segments.indexOf('s');
+      if (index >= 0 && index + 1 < segments.length) {
+        final token = segments[index + 1];
+        return _isTokenShaped(token) ? token : null;
+      }
+      if (uri.host == 's' && segments.isNotEmpty) {
+        return _isTokenShaped(segments.first) ? segments.first : null;
+      }
+      return null;
+    }
+    if (input.contains('://')) return null;
+    final pathIndex = input.lastIndexOf('/s/');
+    if (pathIndex >= 0) {
+      final tail = input.substring(pathIndex + 3);
+      return _isTokenShaped(tail) ? tail : null;
+    }
+    return _isTokenShaped(input) ? input : null;
+  }
+
+  /// A bare token is a short, unambiguous string; inline share codes are
+  /// much longer base64. The length cut keeps the two distinguishable.
+  static bool _isTokenShaped(String value) =>
+      value.length >= 8 &&
+      value.length <= 24 &&
+      RegExp(r'^[A-Za-z0-9]+$').hasMatch(value);
 }
 
 class CplException implements Exception {
