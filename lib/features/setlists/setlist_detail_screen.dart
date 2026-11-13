@@ -258,7 +258,7 @@ class SetlistDetailScreen extends ConsumerWidget {
             .read(shareServiceProvider)
             .bundleForSetlist(setlist.id);
         if (!context.mounted) return;
-        await showShareSheet(context, bundle: bundle);
+        await showShareSheet(context, bundle: bundle, localId: setlist.id);
         return;
       case 'rename':
         final controller = TextEditingController(text: setlist.title);

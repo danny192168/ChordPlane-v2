@@ -107,6 +107,23 @@ class SyncOutbox extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Local record of every server share link this device created. Maps a share
+/// token back to the local song or setlist it was made from, so the "My
+/// shared links" screen can offer "Update shared copy" later. Shares created
+/// before this table existed have no row and cannot be updated in place.
+@DataClassName('SharedLinkRow')
+class SharedLinks extends Table {
+  TextColumn get token => text()();
+  TextColumn get kind => text()(); // 'song' | 'setlist'
+  TextColumn get localId => text()();
+  TextColumn get title => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get lastPushedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {token};
+}
+
 @DriftDatabase(
   tables: [
     Songs,
@@ -115,6 +132,7 @@ class SyncOutbox extends Table {
     SetlistItems,
     AppSettings,
     SyncOutbox,
+    SharedLinks,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -123,11 +141,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(sharedLinks);
+      }
+    },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },

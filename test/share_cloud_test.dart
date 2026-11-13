@@ -183,6 +183,7 @@ void main() {
 
 class _FakeShareApi implements ShareCloudApi {
   final upserts = <ShareRecord>[];
+  final revocations = <String, bool>{};
   int _failuresLeft = 0;
   ShareCloudException? _failure;
 
@@ -208,5 +209,7 @@ class _FakeShareApi implements ShareCloudApi {
   Future<List<ShareRecord>> listMyShares() async => List.of(upserts);
 
   @override
-  Future<void> revokeShare(String token) async {}
+  Future<void> setRevoked(String token, {required bool revoked}) async {
+    revocations[token] = revoked;
+  }
 }

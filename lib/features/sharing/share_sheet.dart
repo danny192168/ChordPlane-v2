@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -19,20 +20,25 @@ const int qrCodeLimit = 1600;
 Future<void> showShareSheet(
   BuildContext context, {
   required CplBundle bundle,
+
+  /// Local song/setlist id the bundle came from, when known. Lets the share
+  /// be remembered so "My shared links" can offer "Update shared copy".
+  String? localId,
 }) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (context) => _ShareSheet(bundle: bundle),
+    builder: (context) => _ShareSheet(bundle: bundle, localId: localId),
   );
 }
 
 class _ShareSheet extends ConsumerStatefulWidget {
-  const _ShareSheet({required this.bundle});
+  const _ShareSheet({required this.bundle, this.localId});
 
   final CplBundle bundle;
+  final String? localId;
 
   @override
   ConsumerState<_ShareSheet> createState() => _ShareSheetState();
@@ -106,6 +112,7 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
                 busy: _busy,
                 serverToken: _serverToken,
                 onCreate: _createServerLink,
+                onOpenMyLinks: _openMyLinks,
               ),
               const SizedBox(height: 20),
               Text(
@@ -265,7 +272,7 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
     try {
       final result = await ref
           .read(serverShareServiceProvider)
-          .share(bundle);
+          .share(bundle, localId: widget.localId);
       if (!mounted) return;
       setState(() => _serverToken = result.token);
       if (result.upload == ShareUpload.queued) {
@@ -313,6 +320,12 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
       SnackBar(content: Text(message)),
     );
   }
+
+  /// Closes the sheet and opens the "My shared links" screen.
+  void _openMyLinks() {
+    Navigator.of(context).pop();
+    GoRouter.of(context).push('/my-shares');
+  }
 }
 
 /// The cloud section of the share sheet: sign-in prompt, create button, and
@@ -324,6 +337,7 @@ class _CloudLinkSection extends StatelessWidget {
     required this.busy,
     required this.serverToken,
     required this.onCreate,
+    required this.onOpenMyLinks,
   });
 
   final CplBundle bundle;
@@ -331,6 +345,7 @@ class _CloudLinkSection extends StatelessWidget {
   final bool busy;
   final String? serverToken;
   final VoidCallback onCreate;
+  final VoidCallback onOpenMyLinks;
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +415,17 @@ class _CloudLinkSection extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton.icon(
+              onPressed: onOpenMyLinks,
+              icon: const Icon(Icons.link, size: 17),
+              label: const Text('My shared links'),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
         ],
       ),
     );

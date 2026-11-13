@@ -16,6 +16,7 @@ class ShareRecord {
     this.status = 'active',
     this.revoked = false,
     this.viewCount = 0,
+    this.updatedAt,
   });
 
   factory ShareRecord.fromJson(Map<String, dynamic> json) => ShareRecord(
@@ -26,6 +27,7 @@ class ShareRecord {
     status: (json['status'] as String?) ?? 'active',
     revoked: (json['revoked'] as bool?) ?? false,
     viewCount: (json['view_count'] as int?) ?? 0,
+    updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? ''),
   );
 
   final String token;
@@ -35,6 +37,10 @@ class ShareRecord {
   final String status; // 'active' | 'under_review' | 'removed'
   final bool revoked;
   final int viewCount;
+
+  /// When the server last saw an update to this share. Kept only for display
+  /// in "My shared links"; never written back.
+  final DateTime? updatedAt;
 
   bool get isViewable => status == 'active' && !revoked;
 
@@ -85,8 +91,8 @@ abstract interface class ShareCloudApi {
   /// The signed-in user's shares, newest first.
   Future<List<ShareRecord>> listMyShares();
 
-  /// Revokes a share the user owns.
-  Future<void> revokeShare(String token);
+  /// Revokes (or restores) a share the user owns.
+  Future<void> setRevoked(String token, {required bool revoked});
 }
 
 class SupabaseShareApi implements ShareCloudApi {
@@ -141,11 +147,20 @@ class SupabaseShareApi implements ShareCloudApi {
   @override
   Future<List<ShareRecord>> listMyShares() async {
     try {
+      // RLS alone is not enough: the anon-read policy also matches this
+      // query, which would return every active share on the server. Scope
+      // explicitly to the signed-in user's rows.
       final rows = await _client
           .from(_table)
           .select()
+          .eq('owner', _client.auth.currentUser?.id ?? '')
           .order('updated_at', ascending: false);
       return [for (final row in rows) ShareRecord.fromJson(row)];
+    } on SocketException {
+      throw const ShareCloudException(
+        ShareCloudError.network,
+        'No connection — try again when you are back online.',
+      );
     } on AuthException catch (error) {
       throw ShareCloudException(ShareCloudError.auth, error.message);
     } on PostgrestException catch (error) {
@@ -154,9 +169,12 @@ class SupabaseShareApi implements ShareCloudApi {
   }
 
   @override
-  Future<void> revokeShare(String token) async {
+  Future<void> setRevoked(String token, {required bool revoked}) async {
     try {
-      await _client.from(_table).update({'revoked': true}).eq('token', token);
+      await _client
+          .from(_table)
+          .update({'revoked': revoked})
+          .eq('token', token);
     } on AuthException catch (error) {
       throw ShareCloudException(ShareCloudError.auth, error.message);
     } on PostgrestException catch (error) {

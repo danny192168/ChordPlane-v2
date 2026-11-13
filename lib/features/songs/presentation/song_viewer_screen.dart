@@ -659,7 +659,7 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
             .read(shareServiceProvider)
             .bundleForSong(song.id);
         if (!mounted) return;
-        await showShareSheet(context, bundle: bundle);
+        await showShareSheet(context, bundle: bundle, localId: song.id);
         return;
       case 'delete':
         final confirmed = await showDialog<bool>(

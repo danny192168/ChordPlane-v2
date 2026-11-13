@@ -2,6 +2,7 @@ import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_gateway.dart';
 import '../../core/config/app_config.dart';
@@ -149,6 +150,29 @@ class SettingsScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const _SectionLabel('Sharing'),
+          _Card(
+            child: Column(
+              children: [
+                if (AppConfig.hasSupabase && AppConfig.supabaseInitError == null)
+                  ListTile(
+                    leading: const Icon(Icons.link),
+                    title: const Text('My shared links'),
+                    subtitle: const Text(
+                      'View counts, update shared copies, revoke',
+                    ),
+                    onTap: () => context.push('/my-shares'),
+                  )
+                else
+                  const ListTile(
+                    leading: Icon(Icons.link),
+                    title: Text('My shared links'),
+                    subtitle: Text('Needs cloud sharing to be configured'),
+                  ),
               ],
             ),
           ),

@@ -8,6 +8,7 @@ import '../features/setlists/setlists_screen.dart';
 import '../features/setlists/setlist_detail_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/sharing/cpl.dart';
+import '../features/sharing/cloud/my_shares_screen.dart';
 import '../features/sharing/import_screen.dart';
 import '../features/songs/presentation/artist_screen.dart';
 import '../features/songs/presentation/song_editor_screen.dart';
@@ -79,6 +80,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/settings',
                 builder: (context, state) => const SettingsScreen(),
+              ),
+              GoRoute(
+                path: '/my-shares',
+                builder: (context, state) => const MySharesScreen(),
               ),
             ],
           ),

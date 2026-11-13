@@ -3311,6 +3311,418 @@ class SyncOutboxCompanion extends UpdateCompanion<OutboxEntry> {
   }
 }
 
+class $SharedLinksTable extends SharedLinks
+    with TableInfo<$SharedLinksTable, SharedLinkRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SharedLinksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tokenMeta = const VerificationMeta('token');
+  @override
+  late final GeneratedColumn<String> token = GeneratedColumn<String>(
+    'token',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localIdMeta = const VerificationMeta(
+    'localId',
+  );
+  @override
+  late final GeneratedColumn<String> localId = GeneratedColumn<String>(
+    'local_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastPushedAtMeta = const VerificationMeta(
+    'lastPushedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastPushedAt = GeneratedColumn<DateTime>(
+    'last_pushed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    token,
+    kind,
+    localId,
+    title,
+    createdAt,
+    lastPushedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shared_links';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SharedLinkRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('token')) {
+      context.handle(
+        _tokenMeta,
+        token.isAcceptableOrUnknown(data['token']!, _tokenMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tokenMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('local_id')) {
+      context.handle(
+        _localIdMeta,
+        localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('last_pushed_at')) {
+      context.handle(
+        _lastPushedAtMeta,
+        lastPushedAt.isAcceptableOrUnknown(
+          data['last_pushed_at']!,
+          _lastPushedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastPushedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {token};
+  @override
+  SharedLinkRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SharedLinkRow(
+      token: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}token'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      localId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      lastPushedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_pushed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SharedLinksTable createAlias(String alias) {
+    return $SharedLinksTable(attachedDatabase, alias);
+  }
+}
+
+class SharedLinkRow extends DataClass implements Insertable<SharedLinkRow> {
+  final String token;
+  final String kind;
+  final String localId;
+  final String title;
+  final DateTime createdAt;
+  final DateTime lastPushedAt;
+  const SharedLinkRow({
+    required this.token,
+    required this.kind,
+    required this.localId,
+    required this.title,
+    required this.createdAt,
+    required this.lastPushedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['token'] = Variable<String>(token);
+    map['kind'] = Variable<String>(kind);
+    map['local_id'] = Variable<String>(localId);
+    map['title'] = Variable<String>(title);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['last_pushed_at'] = Variable<DateTime>(lastPushedAt);
+    return map;
+  }
+
+  SharedLinksCompanion toCompanion(bool nullToAbsent) {
+    return SharedLinksCompanion(
+      token: Value(token),
+      kind: Value(kind),
+      localId: Value(localId),
+      title: Value(title),
+      createdAt: Value(createdAt),
+      lastPushedAt: Value(lastPushedAt),
+    );
+  }
+
+  factory SharedLinkRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SharedLinkRow(
+      token: serializer.fromJson<String>(json['token']),
+      kind: serializer.fromJson<String>(json['kind']),
+      localId: serializer.fromJson<String>(json['localId']),
+      title: serializer.fromJson<String>(json['title']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      lastPushedAt: serializer.fromJson<DateTime>(json['lastPushedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'token': serializer.toJson<String>(token),
+      'kind': serializer.toJson<String>(kind),
+      'localId': serializer.toJson<String>(localId),
+      'title': serializer.toJson<String>(title),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'lastPushedAt': serializer.toJson<DateTime>(lastPushedAt),
+    };
+  }
+
+  SharedLinkRow copyWith({
+    String? token,
+    String? kind,
+    String? localId,
+    String? title,
+    DateTime? createdAt,
+    DateTime? lastPushedAt,
+  }) => SharedLinkRow(
+    token: token ?? this.token,
+    kind: kind ?? this.kind,
+    localId: localId ?? this.localId,
+    title: title ?? this.title,
+    createdAt: createdAt ?? this.createdAt,
+    lastPushedAt: lastPushedAt ?? this.lastPushedAt,
+  );
+  SharedLinkRow copyWithCompanion(SharedLinksCompanion data) {
+    return SharedLinkRow(
+      token: data.token.present ? data.token.value : this.token,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      localId: data.localId.present ? data.localId.value : this.localId,
+      title: data.title.present ? data.title.value : this.title,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      lastPushedAt: data.lastPushedAt.present
+          ? data.lastPushedAt.value
+          : this.lastPushedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SharedLinkRow(')
+          ..write('token: $token, ')
+          ..write('kind: $kind, ')
+          ..write('localId: $localId, ')
+          ..write('title: $title, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastPushedAt: $lastPushedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(token, kind, localId, title, createdAt, lastPushedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SharedLinkRow &&
+          other.token == this.token &&
+          other.kind == this.kind &&
+          other.localId == this.localId &&
+          other.title == this.title &&
+          other.createdAt == this.createdAt &&
+          other.lastPushedAt == this.lastPushedAt);
+}
+
+class SharedLinksCompanion extends UpdateCompanion<SharedLinkRow> {
+  final Value<String> token;
+  final Value<String> kind;
+  final Value<String> localId;
+  final Value<String> title;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> lastPushedAt;
+  final Value<int> rowid;
+  const SharedLinksCompanion({
+    this.token = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.localId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastPushedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SharedLinksCompanion.insert({
+    required String token,
+    required String kind,
+    required String localId,
+    this.title = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime lastPushedAt,
+    this.rowid = const Value.absent(),
+  }) : token = Value(token),
+       kind = Value(kind),
+       localId = Value(localId),
+       createdAt = Value(createdAt),
+       lastPushedAt = Value(lastPushedAt);
+  static Insertable<SharedLinkRow> custom({
+    Expression<String>? token,
+    Expression<String>? kind,
+    Expression<String>? localId,
+    Expression<String>? title,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? lastPushedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (token != null) 'token': token,
+      if (kind != null) 'kind': kind,
+      if (localId != null) 'local_id': localId,
+      if (title != null) 'title': title,
+      if (createdAt != null) 'created_at': createdAt,
+      if (lastPushedAt != null) 'last_pushed_at': lastPushedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SharedLinksCompanion copyWith({
+    Value<String>? token,
+    Value<String>? kind,
+    Value<String>? localId,
+    Value<String>? title,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? lastPushedAt,
+    Value<int>? rowid,
+  }) {
+    return SharedLinksCompanion(
+      token: token ?? this.token,
+      kind: kind ?? this.kind,
+      localId: localId ?? this.localId,
+      title: title ?? this.title,
+      createdAt: createdAt ?? this.createdAt,
+      lastPushedAt: lastPushedAt ?? this.lastPushedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (token.present) {
+      map['token'] = Variable<String>(token.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (localId.present) {
+      map['local_id'] = Variable<String>(localId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (lastPushedAt.present) {
+      map['last_pushed_at'] = Variable<DateTime>(lastPushedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SharedLinksCompanion(')
+          ..write('token: $token, ')
+          ..write('kind: $kind, ')
+          ..write('localId: $localId, ')
+          ..write('title: $title, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastPushedAt: $lastPushedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3320,6 +3732,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SetlistItemsTable setlistItems = $SetlistItemsTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $SyncOutboxTable syncOutbox = $SyncOutboxTable(this);
+  late final $SharedLinksTable sharedLinks = $SharedLinksTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3331,6 +3744,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     setlistItems,
     appSettings,
     syncOutbox,
+    sharedLinks,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -5645,6 +6059,236 @@ typedef $$SyncOutboxTableProcessedTableManager =
       OutboxEntry,
       PrefetchHooks Function()
     >;
+typedef $$SharedLinksTableCreateCompanionBuilder =
+    SharedLinksCompanion Function({
+      required String token,
+      required String kind,
+      required String localId,
+      Value<String> title,
+      required DateTime createdAt,
+      required DateTime lastPushedAt,
+      Value<int> rowid,
+    });
+typedef $$SharedLinksTableUpdateCompanionBuilder =
+    SharedLinksCompanion Function({
+      Value<String> token,
+      Value<String> kind,
+      Value<String> localId,
+      Value<String> title,
+      Value<DateTime> createdAt,
+      Value<DateTime> lastPushedAt,
+      Value<int> rowid,
+    });
+
+class $$SharedLinksTableFilterComposer
+    extends Composer<_$AppDatabase, $SharedLinksTable> {
+  $$SharedLinksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get token => $composableBuilder(
+    column: $table.token,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localId => $composableBuilder(
+    column: $table.localId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastPushedAt => $composableBuilder(
+    column: $table.lastPushedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SharedLinksTableOrderingComposer
+    extends Composer<_$AppDatabase, $SharedLinksTable> {
+  $$SharedLinksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get token => $composableBuilder(
+    column: $table.token,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localId => $composableBuilder(
+    column: $table.localId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastPushedAt => $composableBuilder(
+    column: $table.lastPushedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SharedLinksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SharedLinksTable> {
+  $$SharedLinksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get token =>
+      $composableBuilder(column: $table.token, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get localId =>
+      $composableBuilder(column: $table.localId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastPushedAt => $composableBuilder(
+    column: $table.lastPushedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$SharedLinksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SharedLinksTable,
+          SharedLinkRow,
+          $$SharedLinksTableFilterComposer,
+          $$SharedLinksTableOrderingComposer,
+          $$SharedLinksTableAnnotationComposer,
+          $$SharedLinksTableCreateCompanionBuilder,
+          $$SharedLinksTableUpdateCompanionBuilder,
+          (
+            SharedLinkRow,
+            BaseReferences<_$AppDatabase, $SharedLinksTable, SharedLinkRow>,
+          ),
+          SharedLinkRow,
+          PrefetchHooks Function()
+        > {
+  $$SharedLinksTableTableManager(_$AppDatabase db, $SharedLinksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SharedLinksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SharedLinksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SharedLinksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> token = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> localId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> lastPushedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SharedLinksCompanion(
+                token: token,
+                kind: kind,
+                localId: localId,
+                title: title,
+                createdAt: createdAt,
+                lastPushedAt: lastPushedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String token,
+                required String kind,
+                required String localId,
+                Value<String> title = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime lastPushedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SharedLinksCompanion.insert(
+                token: token,
+                kind: kind,
+                localId: localId,
+                title: title,
+                createdAt: createdAt,
+                lastPushedAt: lastPushedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SharedLinksTable, SharedLinkRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SharedLinksTable,
+                    SharedLinkRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SharedLinksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SharedLinksTable,
+      SharedLinkRow,
+      $$SharedLinksTableFilterComposer,
+      $$SharedLinksTableOrderingComposer,
+      $$SharedLinksTableAnnotationComposer,
+      $$SharedLinksTableCreateCompanionBuilder,
+      $$SharedLinksTableUpdateCompanionBuilder,
+      (
+        SharedLinkRow,
+        BaseReferences<_$AppDatabase, $SharedLinksTable, SharedLinkRow>,
+      ),
+      SharedLinkRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5661,4 +6305,6 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$SyncOutboxTableTableManager get syncOutbox =>
       $$SyncOutboxTableTableManager(_db, _db.syncOutbox);
+  $$SharedLinksTableTableManager get sharedLinks =>
+      $$SharedLinksTableTableManager(_db, _db.sharedLinks);
 }
