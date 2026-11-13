@@ -27,7 +27,11 @@ Future<void> main() async {
   }
 
   final router = GoRouter(
+    // Friendly pages instead of a raw GoException dump for the bare domain
+    // and any unknown path.
+    errorBuilder: (context, state) => const NotFoundScreen(),
     routes: [
+      GoRoute(path: '/', builder: (context, state) => const HomeLandingScreen()),
       GoRoute(
         path: '/s/:token',
         builder: (context, state) => SetlistListScreen(

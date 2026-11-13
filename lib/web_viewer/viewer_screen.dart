@@ -596,16 +596,18 @@ class _SongSheetBlock extends StatelessWidget {
   }
 }
 
-/// Scaffold shared by both pages: app bar, prominent "open in app" banner,
-/// and the footer.
+/// Scaffold shared by all pages: app bar, "open in app" banner (only when a
+/// share token is known), and the footer.
 class _PageScaffold extends StatelessWidget {
   const _PageScaffold({
-    required this.token,
+    this.token,
     required this.child,
     this.scrollable = false,
   });
 
-  final String token;
+  /// Present on share pages; null on the home / not-found pages, where there
+  /// is nothing to open in the app.
+  final String? token;
   final Widget child;
   final bool scrollable;
 
@@ -635,15 +637,17 @@ class _PageScaffold extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Column(
             children: [
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _launchApp(context, token),
-                  icon: const Icon(Icons.phone_iphone_outlined, size: 19),
-                  label: const Text('Open in the ChordPlane app'),
+              if (token != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _launchApp(context, token!),
+                    icon: const Icon(Icons.phone_iphone_outlined, size: 19),
+                    label: const Text('Open in the ChordPlane app'),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
+                const SizedBox(height: 6),
+              ],
               Text(
                 'Shared with ChordPlane · chordplane.citcs.site',
                 style: TextStyle(
@@ -668,6 +672,100 @@ class _PageScaffold extends StatelessWidget {
     } catch (_) {
       // No handler on this device — the page stays usable.
     }
+  }
+}
+
+/// Landing page for the bare domain (`/`). Anyone who types the host or hits
+/// a QR that encodes it lands here — explain what the site is and what a
+/// real shared link looks like. No redirect: there is no sensible default
+/// share to send people to.
+class HomeLandingScreen extends StatelessWidget {
+  const HomeLandingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return _PageScaffold(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.music_note, size: 52, color: theme.colorScheme.primary),
+          const SizedBox(height: 14),
+          Text(
+            'ChordPlane',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Text(
+              'Chord and lyric sheets with diagrams. Build set lists, share '
+              'them with a link, and transpose any song into the key you '
+              'need.',
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.45,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Shared links look like',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'chordplane.citcs.site/s/<token>',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fallback for every unknown URL — typos in tokens, stale paths, anything
+/// the routes above don't match.
+class NotFoundScreen extends StatelessWidget {
+  const NotFoundScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _PageScaffold(
+      child: _Message(
+        icon: Icons.explore_off_outlined,
+        title: 'Page not found',
+        message:
+            'The page you are looking for does not exist. Shared links look '
+            'like chordplane.citcs.site/s/<token> — double-check the link '
+            'you were sent.',
+      ),
+    );
   }
 }
 
