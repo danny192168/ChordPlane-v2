@@ -54,8 +54,6 @@ class _Ready extends _ViewerState {
 class _ViewerScreenState extends State<ViewerScreen> {
   _ViewerState _state = const _Loading();
 
-  /// User transpose on top of any per-item transpose baked into the share.
-  int _offset = 0;
   Instrument _instrument = Instrument.guitar;
 
   @override
@@ -173,9 +171,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
           ),
         _Ready(:final bundle) => _Content(
             bundle: bundle,
-            offset: _offset,
             instrument: _instrument,
-            onOffsetChanged: (value) => setState(() => _offset = value),
             onInstrumentChanged: (value) => setState(() => _instrument = value),
           ),
       },
@@ -196,24 +192,70 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 }
 
-class _Content extends StatelessWidget {
+class _Content extends StatefulWidget {
   const _Content({
     required this.bundle,
-    required this.offset,
     required this.instrument,
-    required this.onOffsetChanged,
     required this.onInstrumentChanged,
   });
 
   final CplBundle bundle;
-  final int offset;
   final Instrument instrument;
-  final ValueChanged<int> onOffsetChanged;
   final ValueChanged<Instrument> onInstrumentChanged;
 
   @override
+  State<_Content> createState() => _ContentState();
+}
+
+class _ContentState extends State<_Content> {
+  /// Per-song transpose. Single songs get one entry; setlist entries start
+  /// at the transpose baked into the shared setlist item.
+  late List<int> _offsets;
+  final List<GlobalKey> _sectionKeys = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _resetOffsets(widget.bundle);
+  }
+
+  @override
+  void didUpdateWidget(covariant _Content oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bundle != widget.bundle) {
+      setState(() => _resetOffsets(widget.bundle));
+    }
+  }
+
+  void _resetOffsets(CplBundle bundle) {
+    _sectionKeys.clear();
+    if (bundle.kind == CplKind.setlist) {
+      _offsets = [
+        for (final item in bundle.items) item.transpose,
+      ];
+      for (final _ in bundle.items) {
+        _sectionKeys.add(GlobalKey());
+      }
+    } else {
+      _offsets = [0];
+    }
+  }
+
+  void _jumpTo(int index) {
+    final key = _sectionKeys[index];
+    final context = key.currentContext;
+    if (context == null) return;
+    Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      alignment: 0.0,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final bundle = widget.bundle;
     final isSetlist = bundle.kind == CplKind.setlist;
 
     return SingleChildScrollView(
@@ -226,47 +268,32 @@ class _Content extends StatelessWidget {
             children: [
               _Header(
                 bundle: bundle,
-                instrument: instrument,
-                onInstrumentChanged: onInstrumentChanged,
+                instrument: widget.instrument,
+                onInstrumentChanged: widget.onInstrumentChanged,
               ),
               const SizedBox(height: 12),
               if (isSetlist)
-                for (var i = 0; i < bundle.items.length; i++) ...[
-                  _SetlistItemHeading(
-                    position: i + 1,
-                    item: bundle.items[i],
-                  ),
-                  _SongSheetBlock(
-                    body: bundle.items[i].song.body,
-                    originalKey: bundle.items[i].song.originalKey,
-                    baseTranspose: bundle.items[i].transpose,
-                    offset: offset,
-                    instrument: instrument,
-                  ),
-                  const SizedBox(height: 22),
-                ]
-              else ...[
-                _TransposeBar(
-                  label: _keyLabel(bundle.song!.originalKey),
-                  offset: offset,
-                  onChanged: onOffsetChanged,
+                _SongListOverview(
+                  bundle: bundle,
+                  onJump: _jumpTo,
                 ),
-                const SizedBox(height: 12),
-                _SongSheetBlock(
-                  body: bundle.song!.body,
-                  originalKey: bundle.song!.originalKey,
-                  baseTranspose: 0,
-                  offset: offset,
-                  instrument: instrument,
+              for (var i = 0; i < (isSetlist ? bundle.items.length : 1); i++)
+                _SongSection(
+                  key: isSetlist ? _sectionKeys[i] : null,
+                  position: isSetlist ? i + 1 : null,
+                  song: isSetlist ? bundle.items[i].song : bundle.song!,
+                  offset: _offsets[i],
+                  instrument: widget.instrument,
+                  onOffsetChanged: (value) =>
+                      setState(() => _offsets[i] = value),
                 ),
-              ],
               const SizedBox(height: 28),
               Center(
                 child: Text(
                   'Shared with ChordPlane · chordplane.citcs.site',
                   style: TextStyle(
                     fontSize: 11.5,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -276,8 +303,165 @@ class _Content extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _keyLabel(String key) => key.isEmpty ? 'Key' : 'Key $key';
+/// The numbered running order at the top of a shared setlist. Tapping a row
+/// scrolls to that song's sheet below.
+class _SongListOverview extends StatelessWidget {
+  const _SongListOverview({required this.bundle, required this.onJump});
+
+  final CplBundle bundle;
+  final ValueChanged<int> onJump;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'SET LIST',
+              style: TextStyle(
+                fontSize: 10.5,
+                letterSpacing: 1.1,
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          for (var i = 0; i < bundle.items.length; i++)
+            ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              leading: Text(
+                '${i + 1}.',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              title: Text(
+                bundle.items[i].song.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: bundle.items[i].song.artist.isEmpty
+                  ? null
+                  : Text(
+                      bundle.items[i].song.artist,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+              trailing: bundle.items[i].transpose != 0
+                  ? Text(
+                      '${bundle.items[i].transpose > 0 ? '+' : ''}'
+                      '${bundle.items[i].transpose}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.primary,
+                      ),
+                    )
+                  : const Icon(Icons.chevron_right, size: 20),
+              onTap: () => onJump(i),
+            ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+/// One song: heading, its own transpose bar, the sheet, and the all-chords
+/// button. Used for both single songs and setlist items.
+class _SongSection extends StatelessWidget {
+  const _SongSection({
+    super.key,
+    this.position,
+    required this.song,
+    required this.offset,
+    required this.instrument,
+    required this.onOffsetChanged,
+  });
+
+  final int? position;
+  final CplSong song;
+  final int offset;
+  final Instrument instrument;
+  final ValueChanged<int> onOffsetChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final transposedKey = ChordDocument.transposeKeyLabel(
+      song.originalKey,
+      offset,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              if (position != null) ...[
+                Text(
+                  '$position.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  song.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (song.artist.isNotEmpty)
+                Text(
+                  song.artist,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _TransposeBar(
+            keyLabel: transposedKey.isEmpty ? 'Key' : 'Key $transposedKey',
+            offset: offset,
+            onChanged: onOffsetChanged,
+          ),
+          const SizedBox(height: 12),
+          _SongSheetBlock(
+            body: song.body,
+            instrument: instrument,
+            offset: offset,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Header extends StatelessWidget {
@@ -366,60 +550,14 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _SetlistItemHeading extends StatelessWidget {
-  const _SetlistItemHeading({required this.position, required this.item});
-
-  final int position;
-  final CplItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 14, bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Text(
-            '$position.',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              item.song.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          if (item.transpose != 0)
-            Text(
-              '${item.transpose > 0 ? '+' : ''}${item.transpose}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _TransposeBar extends StatelessWidget {
   const _TransposeBar({
-    required this.label,
+    required this.keyLabel,
     required this.offset,
     required this.onChanged,
   });
 
-  final String label;
+  final String keyLabel;
   final int offset;
   final ValueChanged<int> onChanged;
 
@@ -442,7 +580,7 @@ class _TransposeBar extends StatelessWidget {
           Expanded(
             child: Text(
               [
-                label,
+                keyLabel,
                 if (offset != 0)
                   'Transposed ${offset > 0 ? '+' : ''}$offset',
               ].join(' · '),
@@ -472,15 +610,11 @@ class _TransposeBar extends StatelessWidget {
 class _SongSheetBlock extends StatelessWidget {
   const _SongSheetBlock({
     required this.body,
-    required this.originalKey,
-    required this.baseTranspose,
     required this.offset,
     required this.instrument,
   });
 
   final String body;
-  final String originalKey;
-  final int baseTranspose;
   final int offset;
   final Instrument instrument;
 
@@ -488,8 +622,8 @@ class _SongSheetBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final document = ChordDocument.build(
       body: body,
-      originalKey: originalKey,
-      transpose: (baseTranspose + offset).clamp(-11, 11),
+      originalKey: '',
+      transpose: offset.clamp(-11, 11),
       detectBare: true,
     );
     return Column(
