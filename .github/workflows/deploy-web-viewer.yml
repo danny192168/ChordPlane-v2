@@ -10,6 +10,7 @@ on:
       - '.github/workflows/deploy-web-viewer.yml'
       - 'pubspec.yaml'
       - 'pubspec.lock'
+      - 'web/**'
       - 'lib/app/theme/app_theme.dart'
       - 'lib/core/chords/**'
       - 'lib/features/songs/presentation/widgets/**'
