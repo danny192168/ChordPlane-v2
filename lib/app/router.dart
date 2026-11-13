@@ -157,7 +157,10 @@ class _DeepLinkRecovery extends StatefulWidget {
 }
 
 class _DeepLinkRecoveryState extends State<_DeepLinkRecovery> {
+  /// Both server-backed links (`…/s/<token>`) and legacy inline codes
+  /// (`…/c/<code>`) are recoverable; anything else is genuinely not found.
   late final bool _isDeepLink =
+      CplFormat.extractServerToken(widget.location) != null ||
       CplBundle.extractShareCode(widget.location) != null;
 
   @override
