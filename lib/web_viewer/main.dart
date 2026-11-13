@@ -1,5 +1,6 @@
 import 'package:chord_diagrams/chord_diagrams.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_theme.dart';
@@ -18,6 +19,10 @@ import 'viewer_screen.dart';
 /// handler accepts both shapes too.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Read the real browser path (/s/<token>...) instead of the default hash
+  // strategy, so go_router sees the actual URL on every fresh page load.
+  usePathUrlStrategy();
 
   try {
     await ChordDiagrams.ensureInitialized();
