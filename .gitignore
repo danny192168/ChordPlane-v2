@@ -1,3 +1,8 @@
+# Release signing (never commit keystore or passwords)
+android/key.properties
+keys/
+*.keystore
+
 # Miscellaneous
 *.class
 *.log
