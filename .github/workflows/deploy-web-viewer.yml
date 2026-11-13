@@ -34,10 +34,10 @@ jobs:
         env:
           TOKEN: ${{ secrets.CHORDPLANE_WEB_TOKEN }}
         run: |
-          git config user.name "chordplane-deploy-bot"
-          git config user.email "deploy@chordplane.local"
           git clone "https://x-access-token:${TOKEN}@github.com/danny192168/Chordplane-Web.git" deploy-web
           cd deploy-web
+          git config user.name "chordplane-deploy-bot"
+          git config user.email "deploy@chordplane.local"
           # Replace the site with the fresh build, preserving config files.
           find . -mindepth 1 -maxdepth 1 \
             ! -name .git ! -name vercel.json ! -name .well-known \
