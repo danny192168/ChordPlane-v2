@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:chord_diagrams/chord_diagrams.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,484 +13,355 @@ import '../../features/songs/presentation/widgets/song_sheet.dart';
 import '../../features/sharing/cpl.dart';
 import 'web_config.dart';
 
-/// Fetches the shared snapshot and renders it read-only: chords above
-/// lyrics, transpose, and chord diagrams — all through the same widgets the
-/// in-app viewer uses.
-class ViewerScreen extends StatefulWidget {
-  const ViewerScreen({super.key, required this.token});
+/// The chosen instrument, shared across pages so the toggle on the setlist
+/// page carries into the song pages.
+final ValueNotifier<Instrument> viewerInstrument =
+    ValueNotifier<Instrument>(Instrument.guitar);
 
-  final String? token;
+/// One fetch per app run, shared by the setlist and song pages.
+Future<ViewerData> loadSharedBundle(String token) =>
+    _fetches.putIfAbsent(token, () => _fetch(token));
 
-  @override
-  State<ViewerScreen> createState() => _ViewerScreenState();
+final Map<String, Future<ViewerData>> _fetches = {};
+
+Future<ViewerData> _fetch(String token) async {
+  final uri = Uri.parse(
+    '${WebViewerConfig.supabaseUrl}/rest/v1/shared_bundles',
+  ).replace(
+    queryParameters: {
+      'token': 'eq.$token',
+      'select': 'kind,title,snapshot,status,revoked',
+    },
+  );
+  final response = await http.get(
+    uri,
+    headers: {
+      'apikey': WebViewerConfig.supabasePublishableKey,
+      'Authorization': 'Bearer ${WebViewerConfig.supabasePublishableKey}',
+    },
+  );
+  if (response.statusCode != 200) {
+    throw _ViewerException('The server responded with ${response.statusCode}.');
+  }
+  final rows = (jsonDecode(response.body) as List).cast<Map>();
+  if (rows.isEmpty) {
+    return const ViewerData.unavailable(_UnavailableReason.unknown);
+  }
+  final row = rows.first;
+  final status = (row['status'] as String?) ?? 'active';
+  final revoked = (row['revoked'] as bool?) ?? false;
+  if (revoked) return const ViewerData.unavailable(_UnavailableReason.revoked);
+  if (status == 'under_review') {
+    return const ViewerData.unavailable(_UnavailableReason.underReview);
+  }
+  if (status == 'removed') {
+    return const ViewerData.unavailable(_UnavailableReason.removed);
+  }
+  return ViewerData.ready(CplBundle.decodeJson(jsonEncode(row['snapshot'])));
 }
 
-sealed class _ViewerState {
-  const _ViewerState();
+sealed class ViewerData {
+  const ViewerData();
+
+  const factory ViewerData.unavailable(_UnavailableReason reason) =
+      _UnavailableData;
+  const factory ViewerData.ready(CplBundle bundle) = _ReadyData;
 }
 
-class _Loading extends _ViewerState {
-  const _Loading();
-}
-
-class _Failed extends _ViewerState {
-  const _Failed(this.message);
-
-  final String message;
-}
-
-enum _UnavailableReason { unknown, revoked, underReview, removed }
-
-class _Unavailable extends _ViewerState {
-  const _Unavailable(this.reason);
+class _UnavailableData implements ViewerData {
+  const _UnavailableData(this.reason);
 
   final _UnavailableReason reason;
 }
 
-class _Ready extends _ViewerState {
-  const _Ready(this.bundle);
+class _ReadyData implements ViewerData {
+  const _ReadyData(this.bundle);
 
   final CplBundle bundle;
 }
 
-class _ViewerScreenState extends State<ViewerScreen> {
-  _ViewerState _state = const _Loading();
+class _ViewerException implements Exception {
+  const _ViewerException(this.message);
 
-  Instrument _instrument = Instrument.guitar;
+  final String message;
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
+  String toString() => message;
+}
 
-  Future<void> _load() async {
-    if (widget.token == null) {
-      setState(() => _state = const _Unavailable(_UnavailableReason.unknown));
-      return;
-    }
-    setState(() => _state = const _Loading());
-    final uri = Uri.parse(
-      '${WebViewerConfig.supabaseUrl}/rest/v1/shared_bundles',
-    ).replace(
-      queryParameters: {
-        'token': 'eq.${widget.token}',
-        'select': 'kind,title,snapshot,status,revoked',
-      },
-    );
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'apikey': WebViewerConfig.supabasePublishableKey,
-          'Authorization':
-              'Bearer ${WebViewerConfig.supabasePublishableKey}',
-        },
-      );
-      if (response.statusCode != 200) {
-        setState(() => _state = _Failed('The server responded with '
-            '${response.statusCode}.'));
-        return;
-      }
-      final rows = (jsonDecode(response.body) as List).cast<Map>();
-      if (rows.isEmpty) {
-        setState(() => _state = const _Unavailable(_UnavailableReason.unknown));
-        return;
-      }
-      final row = rows.first;
-      final status = (row['status'] as String?) ?? 'active';
-      final revoked = (row['revoked'] as bool?) ?? false;
-      if (revoked) {
-        setState(() => _state = const _Unavailable(_UnavailableReason.revoked));
-        return;
-      }
-      if (status == 'under_review') {
-        setState(
-          () => _state = const _Unavailable(_UnavailableReason.underReview),
-        );
-        return;
-      }
-      if (status == 'removed') {
-        setState(() => _state = const _Unavailable(_UnavailableReason.removed));
-        return;
-      }
-      final bundle = CplBundle.decodeJson(jsonEncode(row['snapshot']));
-      setState(() => _state = _Ready(bundle));
-    } on CplException catch (error) {
-      setState(() => _state = _Failed(error.message));
-    } catch (_) {
-      setState(() => _state = const _Failed(
-        'Could not reach the server. Check your connection and try again.',
-      ));
-    }
-  }
+enum _UnavailableReason { unknown, revoked, underReview, removed }
+
+/// Landing page for `/s/<token>`: the set-list overview only — no lyrics.
+/// Setlists show the running order; single songs go straight to the sheet.
+class SetlistListScreen extends StatelessWidget {
+  const SetlistListScreen({super.key, required this.token});
+
+  final String token;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ChordPlane'),
-        actions: [
-          if (_state is _Ready)
-            IconButton(
-              tooltip: 'Open in the app',
-              icon: const Icon(Icons.phone_iphone_outlined),
-              onPressed: _openInApp,
+    return FutureBuilder<ViewerData>(
+      future: loadSharedBundle(token),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _PageScaffold(
+            token: token,
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return _PageScaffold(
+            token: token,
+            child: _Message(
+              icon: Icons.cloud_off_outlined,
+              title: 'Something went wrong',
+              message: snapshot.error is _ViewerException
+                  ? (snapshot.error as _ViewerException).message
+                  : 'Could not reach the server. Check your connection and '
+                      'try again.',
             ),
-        ],
-      ),
-      body: switch (_state) {
-        _Loading() => const Center(child: CircularProgressIndicator()),
-        _Failed(:final message) => _Message(
-            icon: Icons.cloud_off_outlined,
-            title: 'Something went wrong',
-            message: message,
-            action: OutlinedButton(
-              onPressed: _load,
-              child: const Text('Try again'),
+          );
+        }
+        final data = snapshot.data!;
+        return switch (data) {
+          _UnavailableData(:final reason) => _PageScaffold(
+            token: token,
+            child: _unavailableMessage(reason),
+          ),
+          _ReadyData(:final bundle) => _PageScaffold(
+            token: token,
+            scrollable: true,
+            child: bundle.kind == CplKind.setlist
+                ? _SetlistOverview(bundle: bundle)
+                : _SongSection(song: bundle.song!, offset: 0),
+          ),
+        };
+      },
+    );
+  }
+}
+
+/// Song page for `/s/<token>/<n>`: exactly one song's sheet.
+class SongScreen extends StatelessWidget {
+  const SongScreen({super.key, required this.token, required this.songIndex});
+
+  final String token;
+
+  /// 1-based position in the shared setlist.
+  final int songIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ViewerData>(
+      future: loadSharedBundle(token),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _PageScaffold(
+            token: token,
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return _PageScaffold(
+            token: token,
+            child: _Message(
+              icon: Icons.cloud_off_outlined,
+              title: 'Something went wrong',
+              message: snapshot.error is _ViewerException
+                  ? (snapshot.error as _ViewerException).message
+                  : 'Could not reach the server. Check your connection and '
+                      'try again.',
             ),
+          );
+        }
+        final data = snapshot.data!;
+        return switch (data) {
+          _UnavailableData(:final reason) => _PageScaffold(
+            token: token,
+            child: _unavailableMessage(reason),
           ),
-        _Unavailable(:final reason) => _Message(
-            icon: Icons.link_off_outlined,
-            title: switch (reason) {
-              _UnavailableReason.unknown => 'Link not found',
-              _UnavailableReason.revoked => 'Link no longer available',
-              _UnavailableReason.underReview => 'Link temporarily hidden',
-              _UnavailableReason.removed => 'Link no longer available',
-            },
-            message: switch (reason) {
-              _UnavailableReason.unknown =>
-                'This link is not valid or has been deleted. Ask the sender '
-                    'for a new one.',
-              _UnavailableReason.revoked =>
-                'The person who shared this turned the link off.',
-              _UnavailableReason.underReview =>
-                'This share is being checked while we look into a report. '
-                    'Check back later.',
-              _UnavailableReason.removed =>
-                'This share was taken down and cannot be viewed.',
-            },
-          ),
-        _Ready(:final bundle) => _Content(
-            bundle: bundle,
-            instrument: _instrument,
-            onInstrumentChanged: (value) => setState(() => _instrument = value),
-          ),
+          _ReadyData() => _songPage(context, data),
+        };
       },
     );
   }
 
-  Future<void> _openInApp() async {
-    if (widget.token == null) return;
-    try {
-      await launchUrl(
-        Uri.parse('chordplane://s/${widget.token}'),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {
-      // No handler on this device — silently ignore; visitors without the
-      // app just keep reading here.
-    }
-  }
-}
-
-class _Content extends StatefulWidget {
-  const _Content({
-    required this.bundle,
-    required this.instrument,
-    required this.onInstrumentChanged,
-  });
-
-  final CplBundle bundle;
-  final Instrument instrument;
-  final ValueChanged<Instrument> onInstrumentChanged;
-
-  @override
-  State<_Content> createState() => _ContentState();
-}
-
-class _ContentState extends State<_Content> {
-  /// Per-song transpose. Single songs get one entry; setlist entries start
-  /// at the transpose baked into the shared setlist item.
-  late List<int> _offsets;
-  final List<GlobalKey> _sectionKeys = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _resetOffsets(widget.bundle);
-  }
-
-  @override
-  void didUpdateWidget(covariant _Content oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.bundle != widget.bundle) {
-      setState(() => _resetOffsets(widget.bundle));
-    }
-  }
-
-  void _resetOffsets(CplBundle bundle) {
-    _sectionKeys.clear();
+  Widget _songPage(BuildContext context, _ReadyData data) {
+    final bundle = data.bundle;
     if (bundle.kind == CplKind.setlist) {
-      _offsets = [
-        for (final item in bundle.items) item.transpose,
-      ];
-      for (final _ in bundle.items) {
-        _sectionKeys.add(GlobalKey());
+      final index = songIndex - 1;
+      if (index < 0 || index >= bundle.items.length) {
+        return _PageScaffold(
+          token: token,
+          child: _Message(
+            icon: Icons.music_note_outlined,
+            title: 'Song not found',
+            message: 'That position does not exist in this set list.',
+            action: FilledButton.icon(
+              onPressed: () => context.go('/s/$token'),
+              icon: const Icon(Icons.list),
+              label: const Text('All songs'),
+            ),
+          ),
+        );
       }
-    } else {
-      _offsets = [0];
+      return _PageScaffold(
+        token: token,
+        scrollable: true,
+        child: _SongDetail(bundle: bundle, index: index),
+      );
     }
-  }
-
-  void _jumpTo(int index) {
-    final key = _sectionKeys[index];
-    final context = key.currentContext;
-    if (context == null) return;
-    Scrollable.ensureVisible(
-      context,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-      alignment: 0.0,
+    // A shared single song: index is irrelevant, show the song.
+    return _PageScaffold(
+      token: token,
+      scrollable: true,
+      child: _SongSection(song: bundle.song!, offset: 0),
     );
   }
+}
+
+/// Stateful wrapper for one setlist song: local transpose offset and the
+/// back-to-list affordance.
+class _SongDetail extends StatefulWidget {
+  const _SongDetail({required this.bundle, required this.index});
+
+  final CplBundle bundle;
+  final int index;
+
+  @override
+  State<_SongDetail> createState() => _SongDetailState();
+}
+
+class _SongDetailState extends State<_SongDetail> {
+  late int _offset = widget.bundle.items[widget.index].transpose;
 
   @override
   Widget build(BuildContext context) {
-    final bundle = widget.bundle;
-    final isSetlist = bundle.kind == CplKind.setlist;
+    final item = widget.bundle.items[widget.index];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextButton.icon(
+          onPressed: () => context.go('/s/${_tokenOf(context)}'),
+          icon: const Icon(Icons.arrow_back, size: 18),
+          label: const Text('All songs'),
+        ),
+        _SongSection(
+          song: item.song,
+          offset: _offset,
+          onOffsetChanged: (value) => setState(() => _offset = value),
+        ),
+      ],
+    );
+  }
+}
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+/// The numbered running order — the landing view of a shared setlist.
+class _SetlistOverview extends StatelessWidget {
+  const _SetlistOverview({required this.bundle});
+
+  final CplBundle bundle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final token = _tokenOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Header(bundle: bundle),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(
-                bundle: bundle,
-                instrument: widget.instrument,
-                onInstrumentChanged: widget.onInstrumentChanged,
-              ),
-              const SizedBox(height: 12),
-              if (isSetlist)
-                _SongListOverview(
-                  bundle: bundle,
-                  onJump: _jumpTo,
-                ),
-              for (var i = 0; i < (isSetlist ? bundle.items.length : 1); i++)
-                _SongSection(
-                  key: isSetlist ? _sectionKeys[i] : null,
-                  position: isSetlist ? i + 1 : null,
-                  song: isSetlist ? bundle.items[i].song : bundle.song!,
-                  offset: _offsets[i],
-                  instrument: widget.instrument,
-                  onOffsetChanged: (value) =>
-                      setState(() => _offsets[i] = value),
-                ),
-              const SizedBox(height: 28),
-              Center(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(
-                  'Shared with ChordPlane · chordplane.citcs.site',
+                  'SET LIST',
                   style: TextStyle(
-                    fontSize: 11.5,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The numbered running order at the top of a shared setlist. Tapping a row
-/// scrolls to that song's sheet below.
-class _SongListOverview extends StatelessWidget {
-  const _SongListOverview({required this.bundle, required this.onJump});
-
-  final CplBundle bundle;
-  final ValueChanged<int> onJump;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(
-              'SET LIST',
-              style: TextStyle(
-                fontSize: 10.5,
-                letterSpacing: 1.1,
-                fontWeight: FontWeight.w800,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
-          for (var i = 0; i < bundle.items.length; i++)
-            ListTile(
-              dense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              leading: Text(
-                '${i + 1}.',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              title: Text(
-                bundle.items[i].song.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: bundle.items[i].song.artist.isEmpty
-                  ? null
-                  : Text(
-                      bundle.items[i].song.artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-              trailing: bundle.items[i].transpose != 0
-                  ? Text(
-                      '${bundle.items[i].transpose > 0 ? '+' : ''}'
-                      '${bundle.items[i].transpose}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.primary,
-                      ),
-                    )
-                  : const Icon(Icons.chevron_right, size: 20),
-              onTap: () => onJump(i),
-            ),
-          const SizedBox(height: 4),
-        ],
-      ),
-    );
-  }
-}
-
-/// One song: heading, its own transpose bar, the sheet, and the all-chords
-/// button. Used for both single songs and setlist items.
-class _SongSection extends StatelessWidget {
-  const _SongSection({
-    super.key,
-    this.position,
-    required this.song,
-    required this.offset,
-    required this.instrument,
-    required this.onOffsetChanged,
-  });
-
-  final int? position;
-  final CplSong song;
-  final int offset;
-  final Instrument instrument;
-  final ValueChanged<int> onOffsetChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final transposedKey = ChordDocument.transposeKeyLabel(
-      song.originalKey,
-      offset,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              if (position != null) ...[
-                Text(
-                  '$position.',
-                  style: TextStyle(
+                    fontSize: 10.5,
+                    letterSpacing: 1.1,
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.primary,
                   ),
                 ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: Text(
-                  song.title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
               ),
-              if (song.artist.isNotEmpty)
-                Text(
-                  song.artist,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: theme.colorScheme.onSurfaceVariant,
+              for (var i = 0; i < bundle.items.length; i++)
+                ListTile(
+                  dense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16),
+                  leading: Text(
+                    '${i + 1}.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
+                  title: Text(
+                    bundle.items[i].song.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: bundle.items[i].song.artist.isEmpty
+                      ? null
+                      : Text(
+                          bundle.items[i].song.artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (bundle.items[i].transpose != 0)
+                        Text(
+                          '${bundle.items[i].transpose > 0 ? '+' : ''}'
+                          '${bundle.items[i].transpose}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.chevron_right, size: 20),
+                    ],
+                  ),
+                  onTap: () => context.go('/s/$token/${i + 1}'),
                 ),
+              const SizedBox(height: 4),
             ],
           ),
-          const SizedBox(height: 8),
-          _TransposeBar(
-            keyLabel: transposedKey.isEmpty ? 'Key' : 'Key $transposedKey',
-            offset: offset,
-            onChanged: onOffsetChanged,
-          ),
-          const SizedBox(height: 12),
-          _SongSheetBlock(
-            body: song.body,
-            instrument: instrument,
-            offset: offset,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
+/// Reads the share token out of the current go_router match.
+String _tokenOf(BuildContext context) {
+  return GoRouterState.of(context).pathParameters['token'] ?? '';
+}
+
+/// Shared header card used on the setlist landing page.
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.bundle,
-    required this.instrument,
-    required this.onInstrumentChanged,
-  });
+  const _Header({required this.bundle});
 
   final CplBundle bundle;
-  final Instrument instrument;
-  final ValueChanged<Instrument> onInstrumentChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isSetlist = bundle.kind == CplKind.setlist;
-    final first = isSetlist
-        ? bundle.items.firstOrNull?.song
-        : bundle.song;
-
-    final facts = <String>[
-      if (isSetlist) '${bundle.items.length} songs',
-      if (!isSetlist && (first?.artist.isNotEmpty ?? false)) first!.artist,
-      if (first != null && first.capo > 0) 'Capo ${first.capo}',
-      if (first?.tempo != null) '${first!.tempo} BPM',
-    ];
+    final facts = <String>['${bundle.items.length} songs'];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -502,7 +375,7 @@ class _Header extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            isSetlist ? Icons.queue_music : Icons.music_note,
+            Icons.queue_music,
             color: theme.colorScheme.primary,
             size: 28,
           ),
@@ -517,35 +390,108 @@ class _Header extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (facts.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    facts.join(' · '),
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                const SizedBox(height: 3),
+                Text(
+                  facts.join(' · '),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                ],
+                ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          SegmentedButton<Instrument>(
-            showSelectedIcon: false,
-            style: const ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            segments: const [
-              ButtonSegment(value: Instrument.guitar, label: Text('Guitar')),
-              ButtonSegment(value: Instrument.ukulele, label: Text('Ukulele')),
-            ],
-            selected: {instrument},
-            onSelectionChanged: (value) => onInstrumentChanged(value.first),
-          ),
+          _InstrumentToggle(),
         ],
       ),
+    );
+  }
+}
+
+/// Guitar/ukulele switch, driven by the shared [viewerInstrument] notifier.
+class _InstrumentToggle extends StatelessWidget {
+  const _InstrumentToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Instrument>(
+      valueListenable: viewerInstrument,
+      builder: (context, instrument, _) {
+        return SegmentedButton<Instrument>(
+          showSelectedIcon: false,
+          style: const ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          segments: const [
+            ButtonSegment(value: Instrument.guitar, label: Text('Guitar')),
+            ButtonSegment(value: Instrument.ukulele, label: Text('Ukulele')),
+          ],
+          selected: {instrument},
+          onSelectionChanged: (value) => viewerInstrument.value = value.first,
+        );
+      },
+    );
+  }
+}
+
+/// One song: heading, transpose bar, the sheet, and the all-chords button.
+class _SongSection extends StatelessWidget {
+  const _SongSection({
+    required this.song,
+    required this.offset,
+    this.onOffsetChanged,
+  });
+
+  final CplSong song;
+  final int offset;
+  final ValueChanged<int>? onOffsetChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final transposedKey = ChordDocument.transposeKeyLabel(
+      song.originalKey,
+      offset,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Expanded(
+              child: Text(
+                song.title,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            if (song.artist.isNotEmpty)
+              Text(
+                song.artist,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (onOffsetChanged != null) ...[
+          _TransposeBar(
+            keyLabel: transposedKey.isEmpty ? 'Key' : 'Key $transposedKey',
+            offset: offset,
+            onChanged: onOffsetChanged!,
+          ),
+          const SizedBox(height: 12),
+        ],
+        _SongSheetBlock(body: song.body, offset: offset),
+      ],
     );
   }
 }
@@ -608,15 +554,10 @@ class _TransposeBar extends StatelessWidget {
 }
 
 class _SongSheetBlock extends StatelessWidget {
-  const _SongSheetBlock({
-    required this.body,
-    required this.offset,
-    required this.instrument,
-  });
+  const _SongSheetBlock({required this.body, required this.offset});
 
   final String body;
   final int offset;
-  final Instrument instrument;
 
   @override
   Widget build(BuildContext context) {
@@ -635,7 +576,7 @@ class _SongSheetBlock extends StatelessWidget {
           onChordTap: (chord) => showChordVoicingsSheet(
             context,
             chord: chord,
-            instrument: instrument,
+            instrument: viewerInstrument.value,
           ),
         ),
         if (document.chords.isNotEmpty) ...[
@@ -644,7 +585,7 @@ class _SongSheetBlock extends StatelessWidget {
             onPressed: () => showSongChordsSheet(
               context,
               chords: document.chords,
-              instrument: instrument,
+              instrument: viewerInstrument.value,
             ),
             icon: const Icon(Icons.piano_outlined, size: 18),
             label: Text('All chords (${document.chords.length})'),
@@ -653,6 +594,105 @@ class _SongSheetBlock extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Scaffold shared by both pages: app bar, prominent "open in app" banner,
+/// and the footer.
+class _PageScaffold extends StatelessWidget {
+  const _PageScaffold({
+    required this.token,
+    required this.child,
+    this.scrollable = false,
+  });
+
+  final String token;
+  final Widget child;
+  final bool scrollable;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = Column(
+      children: [
+        Expanded(
+          child: scrollable
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: child,
+                    ),
+                  ),
+                )
+              : Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    child: child,
+                  ),
+                ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _launchApp(context, token),
+                  icon: const Icon(Icons.phone_iphone_outlined, size: 19),
+                  label: const Text('Open in the ChordPlane app'),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Shared with ChordPlane · chordplane.citcs.site',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    return Scaffold(appBar: AppBar(title: const Text('ChordPlane')), body: body);
+  }
+
+  Future<void> _launchApp(BuildContext context, String token) async {
+    try {
+      await launchUrl(
+        Uri.parse('chordplane://s/$token'),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      // No handler on this device — the page stays usable.
+    }
+  }
+}
+
+Widget _unavailableMessage(_UnavailableReason reason) {
+  return _Message(
+    icon: Icons.link_off_outlined,
+    title: switch (reason) {
+      _UnavailableReason.unknown => 'Link not found',
+      _UnavailableReason.revoked => 'Link no longer available',
+      _UnavailableReason.underReview => 'Link temporarily hidden',
+      _UnavailableReason.removed => 'Link no longer available',
+    },
+    message: switch (reason) {
+      _UnavailableReason.unknown =>
+        'This link is not valid or has been deleted. Ask the sender for a '
+            'new one.',
+      _UnavailableReason.revoked =>
+        'The person who shared this turned the link off.',
+      _UnavailableReason.underReview =>
+        'This share is being checked while we look into a report. Check '
+            'back later.',
+      _UnavailableReason.removed =>
+        'This share was taken down and cannot be viewed.',
+    },
+  );
 }
 
 class _Message extends StatelessWidget {
@@ -671,38 +711,33 @@ class _Message extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 44, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Text(
-                message,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.45,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            if (action != null) ...[const SizedBox(height: 18), action!],
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 44, color: theme.colorScheme.onSurfaceVariant),
+        const SizedBox(height: 14),
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+          textAlign: TextAlign.center,
         ),
-      ),
+        const SizedBox(height: 6),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Text(
+            message,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        if (action != null) ...[const SizedBox(height: 18), action!],
+      ],
     );
   }
 }

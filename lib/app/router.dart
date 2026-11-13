@@ -132,6 +132,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         redirect: (context, state) =>
             '/import?s=${Uri.encodeComponent(state.pathParameters['token']!)}',
       ),
+      // Song-level links (/s/<token>/<n>) from the web viewer land in the
+      // same import flow; the app always imports the whole bundle.
+      GoRoute(
+        path: '/s/:token/:song',
+        parentNavigatorKey: rootNavigatorKey,
+        redirect: (context, state) =>
+            '/import?s=${Uri.encodeComponent(state.pathParameters['token']!)}',
+      ),
     ],
   );
 });
