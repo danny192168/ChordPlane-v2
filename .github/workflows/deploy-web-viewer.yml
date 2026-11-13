@@ -1,0 +1,52 @@
+name: Deploy web viewer
+
+# Builds the public /s/<token> viewer and pushes its output to the
+# Chordplane-Web repo, which Vercel deploys automatically.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/web_viewer/**'
+      - '.github/workflows/deploy-web-viewer.yml'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'lib/app/theme/app_theme.dart'
+      - 'lib/core/chords/**'
+      - 'lib/features/songs/presentation/widgets/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build viewer
+        run: flutter build web --release --target lib/web_viewer/main.dart
+
+      - name: Push to Chordplane-Web
+        env:
+          TOKEN: ${{ secrets.CHORDPLANE_WEB_TOKEN }}
+        run: |
+          git config user.name "chordplane-deploy-bot"
+          git config user.email "deploy@chordplane.local"
+          git clone "https://x-access-token:${TOKEN}@github.com/danny192168/Chordplane-Web.git" deploy-web
+          cd deploy-web
+          # Replace the site with the fresh build, preserving config files.
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name .git ! -name vercel.json ! -name .well-known \
+            -exec rm -rf {} +
+          cp -r ../build/web/* .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to deploy."
+          else
+            git commit -m "Deploy web viewer from ${GITHUB_SHA::7}"
+            git push origin main
+          fi
