@@ -255,13 +255,20 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                   ? 'Chords can be wrapped in < > — <G> or a whole progression '
                       'like <G D Em C> — or written ChordPro-style: [Am]Hello '
                       'world. Chord-only lines above lyrics (Ultimate Guitar '
-                      'format) are detected too. Use {start_of_verse: Verse 1} '
-                      '… {end_of_verse} to add sections.'
+                      'format) are detected too. A line made only of < > '
+                      'groups (<G      D     Em>) or starting with > '
+                      '(>   G   D   Em) positions its chords by their '
+                      'spacing above the next lyric line. Use '
+                      '{start_of_verse: Verse 1} … {end_of_verse} to add '
+                      'sections.'
                   : 'Bare chord detection is off, so wrap your chords in '
                       '< > — e.g. <G> or <G D Em C> — right before the '
-                      'syllable. ChordPro [Am] brackets work too. Use '
-                      '{start_of_verse: Verse 1} … {end_of_verse} to add '
-                      'sections.',
+                      'syllable. ChordPro [Am] brackets work too. A line '
+                      'made only of < > groups (<G      D     Em>) or '
+                      'starting with > (>   G   D   Em) positions its '
+                      'chords by their spacing above the next lyric line. '
+                      'Use {start_of_verse: Verse 1} … {end_of_verse} to '
+                      'add sections.',
               style: TextStyle(
                 fontSize: 12,
                 color: theme.colorScheme.onSurfaceVariant,

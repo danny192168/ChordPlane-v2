@@ -6,6 +6,12 @@ import 'package:flutter/foundation.dart';
 /// Supported input:
 ///  - ChordPro `[Am]` — already correct, left untouched.
 ///  - Angle-wrapped chords `<Am>` and progressions `<G D Em C>`.
+///  - Angle-wrapped chord lines `<G      D     Em>` — a line made up only
+///    of groups: the spacing positions each chord above the lyric line
+///    that follows.
+///  - `>`-prefixed chord lines `>   G   D   Em` — everything after the
+///    marker on that line is chords, positioned by their spacing above
+///    the next lyric line.
 ///  - Ultimate-Guitar-style section headers: `[Verse]`, `[Chorus 2]`, …
 ///  - With [detectBare]: chords without any brackets — chord-only lines
 ///    placed above lyric lines (the classic Ultimate Guitar / crd format)
@@ -26,6 +32,13 @@ class ChordSource {
 
   /// `<…>` groups — either a single chord or a space-separated progression.
   static final RegExp _angleGroup = RegExp(r'<([^<>]*)>');
+
+  /// A line made up solely of `<…>` groups (plus whitespace), e.g.
+  /// `<G      D     Em>` — treated as a positional chord line.
+  static final RegExp _lineOfGroupsOnly = RegExp(r'^\s*(?:<[^<>]*>\s*)+$');
+
+  /// A `>` marker introducing a chord line: `>   G   D   Em`.
+  static final RegExp _gtMarker = RegExp(r'^\s*>');
 
   /// Ultimate-Guitar-style standalone section headers.
   static final RegExp _sectionHeader = RegExp(
@@ -52,9 +65,13 @@ class ChordSource {
     if (body.trim().isEmpty) return body;
 
     // Pass 1: `<G>` and `<G D Em C>` angle groups become `[G]` / `[G][D][Em][C]`.
+    // Explicit positional chord lines are left untouched — their spacing
+    // matters and is resolved in the main pass below.
     final lines = [
       for (final line in body.split('\n'))
-        line.trim().startsWith('{') ? line : _convertAngleGroups(line),
+        line.trim().startsWith('{') || _explicitChordLine(line) != null
+            ? line
+            : _convertAngleGroups(line),
     ];
     final classified = List<_LineKind>.filled(lines.length, _LineKind.text);
     for (var i = 0; i < lines.length; i++) {
@@ -98,9 +115,27 @@ class ChordSource {
             out.add(_bracketTokens(line, tokens));
           }
           continue;
+        case _LineKind.explicitChordLine:
+          // Explicitly marked chord line (`<G      D>` or `>   G   D`).
+          // Always recognized — the marker makes it unambiguous, so this
+          // does not depend on [detectBare].
+          final explicit = _explicitChordLine(line)!;
+          final lyricIndex = _lyricAfter(lines, classified, i + 1);
+          if (lyricIndex != null) {
+            // Anchor each chord at its column inside the lyric line below,
+            // then drop the chord line.
+            out.add(_mapChordsOntoLyric(explicit.tokens, lines[lyricIndex]));
+            classified[lyricIndex] = _LineKind.consumed;
+          } else {
+            // Standalone chord line — keep the spacing between chords.
+            out.add(_bracketTokens(explicit.source, explicit.tokens));
+          }
+          continue;
         case _LineKind.text:
-        case _LineKind.consumed:
           out.add(_inlineChords(line, detectBare: detectBare));
+          continue;
+        case _LineKind.consumed:
+          // Already merged into the chord line above it — drop it.
           continue;
       }
     }
@@ -133,11 +168,36 @@ class ChordSource {
     });
   }
 
+  /// An explicitly marked chord line: either built solely from `<…>` groups
+  /// (`<G      D     Em>` — the brackets are stripped and the spacing kept)
+  /// or introduced by a `>` marker (`>   G   D` — everything after the
+  /// marker is chords). Chord columns are measured on the returned chord
+  /// text so they line up with the visible columns of the lyric line below.
+  /// Returns null when the line is not an explicit chord line, e.g. when a
+  /// group contains a non-chord token (`<spoken>`) or the text after `>`
+  /// is not a row of chords.
+  static ({String source, List<({int column, String chord})> tokens})?
+      _explicitChordLine(String line) {
+    final marker = _gtMarker.firstMatch(line);
+    if (marker != null) {
+      final source = line.substring(marker.end);
+      final tokens = _chordTokens(source);
+      return tokens == null ? null : (source: source, tokens: tokens);
+    }
+    if (!_lineOfGroupsOnly.hasMatch(line)) return null;
+    final source = line.replaceAll('<', '').replaceAll('>', '');
+    final tokens = _chordTokens(source);
+    return tokens == null ? null : (source: source, tokens: tokens);
+  }
+
   static _LineKind _classify(String line) {
     final trimmed = line.trim();
     if (trimmed.isEmpty) return _LineKind.text;
     if (trimmed.startsWith('{')) return _LineKind.directive;
     if (_sectionHeader.hasMatch(line)) return _LineKind.sectionHeader;
+    if (_explicitChordLine(line) != null) {
+      return _LineKind.explicitChordLine;
+    }
     if (!detectableLine(line)) return _LineKind.text;
     if (_chordTokens(line) != null) return _LineKind.chordLine;
     return _LineKind.text;
@@ -154,13 +214,17 @@ class ChordSource {
 
   /// The next lyric line at or after [start], or `null`. Only the line
   /// directly after the chord line can carry the chords — a blank line
-  /// between them means the chord line stands on its own.
+  /// between them means the chord line stands on its own. Another chord
+  /// line is never treated as lyrics either, so consecutive chord lines
+  /// all render as standalone rows.
   static int? _lyricAfter(List<String> lines, List<_LineKind> classified, int start) {
     if (start >= lines.length) return null;
     final kind = classified[start];
     if (kind == _LineKind.consumed ||
         kind == _LineKind.directive ||
-        kind == _LineKind.sectionHeader) {
+        kind == _LineKind.sectionHeader ||
+        kind == _LineKind.chordLine ||
+        kind == _LineKind.explicitChordLine) {
       return null;
     }
     if (lines[start].trim().isEmpty) return null;
@@ -356,4 +420,11 @@ class ChordSource {
   }
 }
 
-enum _LineKind { text, directive, sectionHeader, chordLine, consumed }
+enum _LineKind {
+  text,
+  directive,
+  sectionHeader,
+  chordLine,
+  explicitChordLine,
+  consumed,
+}

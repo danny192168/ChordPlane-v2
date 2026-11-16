@@ -1,4 +1,5 @@
 import 'package:chord_plane/core/chords/chord_document.dart';
+import 'package:chord_plane/core/chords/chord_source.dart';
 import 'package:chord_plane/core/utils/slug.dart';
 import 'package:chord_pro/chord_pro.dart' show AccidentalPreference;
 import 'package:flutter_test/flutter_test.dart';
@@ -170,6 +171,77 @@ void main() {
           '[C]Amazing [Em]grace';
       final document = build(body, detectBare: true);
       expect(document.chords, ['G', 'C', 'D', 'Em']);
+    });
+
+    test('positions full-line angle groups above the lyric line', () {
+      expect(
+        ChordSource.normalize('<G   D>\nLyrics here'),
+        '[G]Lyri[D]cs here',
+      );
+    });
+
+    test('preserves wide spacing inside angle-wrapped chord lines', () {
+      expect(
+        ChordSource.normalize('<G      D     Em>\nLyrics of the song is here'),
+        '[G]Lyrics [D]of the[Em] song is here',
+      );
+      expect(
+        ChordSource.normalize('<       C      G>\nSome more lyrics'),
+        'Some mo[C]re lyri[G]cs',
+      );
+    });
+
+    test('anchors a lone angle-wrapped chord above the next lyric line', () {
+      expect(ChordSource.normalize('<G>\nLyrics here'), '[G]Lyrics here');
+    });
+
+    test('positions >-marked chord lines above the lyric line', () {
+      expect(
+        ChordSource.normalize('>  G   C\nHello world again'),
+        'He[G]llo [C]world again',
+      );
+      expect(
+        ChordSource.normalize('>    G    D     Em     C\n'
+            'Song lyrics here sample lyrics here'),
+        'Song[G] lyri[D]cs her[Em]e sampl[C]e lyrics here',
+      );
+    });
+
+    test('renders explicit chord lines as rows when no lyric follows', () {
+      expect(
+        ChordSource.normalize('<G   D>\n\nLyrics'),
+        '[G]   [D]\n\nLyrics',
+      );
+      expect(
+        ChordSource.normalize('>  G   C\n\nLyrics'),
+        '  [G]   [C]\n\nLyrics',
+      );
+    });
+
+    test('keeps non-chord > lines as literal text', () {
+      const body = '> just a quote, not chords';
+      expect(ChordSource.normalize(body), body);
+    });
+
+    test('keeps a chord line above another chord line standalone', () {
+      expect(
+        ChordSource.normalize('> G   C\n> Am  F\nLyrics here'),
+        ' [G]   [C]\nL[Am]yric[F]s here',
+      );
+    });
+
+    test('explicit chord lines work with bare detection off', () {
+      final document = build('<G   D>\nLyrics here\n>  C\nMore lyrics');
+      expect(document.chords, ['G', 'D', 'C']);
+    });
+
+    test('transposes explicitly positioned chord lines', () {
+      final document = ChordDocument.build(
+        body: '<G      D>\nLyrics here\n>  C\nMore lyrics',
+        originalKey: 'G',
+        transpose: 2,
+      );
+      expect(document.chords, ['A', 'E', 'D']);
     });
   });
 }
