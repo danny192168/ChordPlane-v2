@@ -181,12 +181,17 @@ class SongSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = ChordPlaneColors.of(context);
 
+    // Guitar-tab lines must render in a monospace font to stay aligned.
+    final lineText = units.map((unit) => unit.text).join();
+    final isTab = lineText.contains('|') && lineText.contains('--');
+
     if (!hasChords) {
       return Padding(
         padding: EdgeInsets.only(bottom: 2 * fontScale),
         child: Text(
-          units.map((unit) => unit.text).join(),
+          lineText,
           style: TextStyle(
+            fontFamily: isTab ? 'monospace' : null,
             fontSize: lyricSize,
             height: 1.38,
             color: theme.colorScheme.onSurface,
@@ -204,6 +209,7 @@ class SongSheet extends StatelessWidget {
       color: colors.chord,
     );
     final lyricStyle = TextStyle(
+      fontFamily: isTab ? 'monospace' : null,
       fontSize: lyricSize,
       height: 1.38,
       color: theme.colorScheme.onSurface,
@@ -247,6 +253,7 @@ class _ChordUnit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chord = unit.chord;
+    final badge = unit.badge;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +267,25 @@ class _ChordUnit extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   child: Padding(
                     padding: const EdgeInsets.only(right: 3),
-                    child: Text(chord, style: chordStyle),
+                    // The repeat badge (`2X`) rides beside the chord name,
+                    // smaller and in the accent color so it is easy to spot
+                    // but never mistaken for part of the chord.
+                    child: Text.rich(
+                      TextSpan(
+                        text: chord,
+                        style: chordStyle,
+                        children: [
+                          if (badge != null)
+                            TextSpan(
+                              text: ' $badge',
+                              style: chordStyle.copyWith(
+                                fontSize: chordStyle.fontSize! * 0.72,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
         ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/chords/text_diagnostics.dart';
 import '../../../core/settings/settings.dart';
 import '../data/song_providers.dart';
 import '../data/song_repository.dart';
@@ -59,9 +61,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
   }
 
   Future<void> _load() async {
-    final song = await ref
-        .read(songRepositoryProvider)
-        .getSong(widget.songId!);
+    final song = await ref.read(songRepositoryProvider).getSong(widget.songId!);
     if (!mounted) return;
     if (song == null) {
       setState(() {
@@ -109,6 +109,11 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
               onPressed: _delete,
               icon: const Icon(Icons.delete_outline),
             ),
+          IconButton(
+            tooltip: 'Find hidden characters',
+            onPressed: _showHiddenCharacters,
+            icon: const Icon(Icons.search_outlined),
+          ),
           TextButton(
             onPressed: _saving ? null : _save,
             child: const Text('Save'),
@@ -128,8 +133,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 labelText: 'Title',
                 hintText: 'e.g. Wonderwall',
               ),
-              validator: (value) =>
-                  value == null || value.trim().isEmpty
+              validator: (value) => value == null || value.trim().isEmpty
                   ? 'Give the song a title'
                   : null,
             ),
@@ -238,8 +242,9 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
               contentPadding: EdgeInsets.zero,
               dense: true,
               value: settings.detectBareChords,
-              onChanged: (value) =>
-                  ref.read(settingsProvider.notifier).setDetectBareChords(value),
+              onChanged: (value) => ref
+                  .read(settingsProvider.notifier)
+                  .setDetectBareChords(value),
               title: const Text(
                 'Detect chords without < >',
                 style: TextStyle(fontSize: 14),
@@ -253,22 +258,29 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
             Text(
               settings.detectBareChords
                   ? 'Chords can be wrapped in < > — <G> or a whole progression '
-                      'like <G D Em C> — or written ChordPro-style: [Am]Hello '
-                      'world. Chord-only lines above lyrics (Ultimate Guitar '
-                      'format) are detected too. A line made only of < > '
-                      'groups (<G      D     Em>) or starting with > '
-                      '(>   G   D   Em) positions its chords by their '
-                      'spacing above the next lyric line. Use '
-                      '{start_of_verse: Verse 1} … {end_of_verse} to add '
-                      'sections.'
+                        'like <G D Em C> — or written ChordPro-style: [Am]Hello '
+                        'world. Chord-only lines above lyrics (Ultimate Guitar '
+                        'format) are detected too. A line made only of < > '
+                        'groups (<G      D     Em>) or starting with > '
+                        '(>   G   D   Em) positions its chords by their '
+                        'spacing above the next lyric line — the > counts as '
+                        'the lyric line\u2019s first column. Repeats like '
+                        'G(2X) or a trailing 2X show as a badge; ---x holds '
+                        'and tab lines are kept as typed. Headers can be '
+                        '[Chorus], Chorus:, or just Intro / Verse1 / '
+                        'Prechorus on their own line, optionally with a '
+                        'progression (Intro: <Am Dm E> } 3x).'
                   : 'Bare chord detection is off, so wrap your chords in '
-                      '< > — e.g. <G> or <G D Em C> — right before the '
-                      'syllable. ChordPro [Am] brackets work too. A line '
-                      'made only of < > groups (<G      D     Em>) or '
-                      'starting with > (>   G   D   Em) positions its '
-                      'chords by their spacing above the next lyric line. '
-                      'Use {start_of_verse: Verse 1} … {end_of_verse} to '
-                      'add sections.',
+                        '< > — e.g. <G> or <G D Em C> — right before the '
+                        'syllable. ChordPro [Am] brackets work too. A line '
+                        'made only of < > groups (<G      D     Em>) or '
+                        'starting with > (>   G   D   Em) positions its '
+                        'chords by their spacing above the next lyric line — '
+                        'the > counts as the lyric line\u2019s first column. '
+                        'Repeats like G(2X) show as a badge. Headers can be '
+                        '[Chorus], Chorus:, or just Intro / Verse1 on their '
+                        'own line, optionally with a progression '
+                        '(Intro: <Am Dm E> } 3x).',
               style: TextStyle(
                 fontSize: 12,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -354,7 +366,19 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
   }
 
   Widget _buildChordToolbar(ThemeData theme) {
-    const chords = ['C', 'G', 'D', 'A', 'E', 'F', 'Am', 'Em', 'Dm', 'Bm', 'F#m'];
+    const chords = [
+      'C',
+      'G',
+      'D',
+      'A',
+      'E',
+      'F',
+      'Am',
+      'Em',
+      'Dm',
+      'Bm',
+      'F#m',
+    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -398,20 +422,105 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
   }
 
   void _insertSection() {
-    const template =
-        '{start_of_verse: Verse 1}\n\n{end_of_verse}\n';
+    const template = '{start_of_verse: Verse 1}\n\n{end_of_verse}\n';
     final controller = _body;
     final selection = controller.selection;
     final start = selection.isValid ? selection.start : controller.text.length;
     final end = selection.isValid ? selection.end : controller.text.length;
     final newText = controller.text.replaceRange(start, end, template);
-    final cursor =
-        start + template.indexOf('{end_of_verse}');
+    final cursor = start + template.indexOf('{end_of_verse}');
     controller.value = TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: cursor),
     );
     setState(() {});
+  }
+
+  /// Scans the song body for invisible characters that break chord
+  /// detection (non-breaking spaces, zero-width characters, fullwidth
+  /// `＞`…), shows what was found, and offers to clean the text in place.
+  Future<void> _showHiddenCharacters() async {
+    final findings = TextDiagnostics.scan(_body.text);
+    final affected = <int>{for (final f in findings) f.line};
+    final lines = _body.text.split('\n');
+    final report = StringBuffer()
+      ..writeln(
+        findings.isEmpty
+            ? 'No hidden characters found.'
+            : '${findings.length} hidden character(s) on '
+                  '${affected.length} line(s):',
+      );
+    for (final lineNumber in affected) {
+      report
+        ..write('Line $lineNumber: ')
+        ..writeln(TextDiagnostics.reveal(lines[lineNumber - 1]));
+    }
+
+    final cleaned = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hidden characters'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (findings.isEmpty)
+                const Text(
+                  'No hidden characters found — the text is clean. If '
+                  'pasted chords still are not detected, the problem is '
+                  'the format itself: tell me the exact line.',
+                )
+              else ...[
+                Text(
+                  '${findings.length} hidden character(s) on '
+                  '${affected.length} line(s). These look like normal '
+                  'spaces or brackets but are not, and they break chord '
+                  'detection:',
+                ),
+                const SizedBox(height: 12),
+                for (final lineNumber in affected)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SelectableText(
+                      'Line $lineNumber\n'
+                      '${TextDiagnostics.reveal(lines[lineNumber - 1])}',
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Clipboard.setData(ClipboardData(text: '$report')),
+            child: const Text('Copy report'),
+          ),
+          if (findings.isNotEmpty)
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Clean text'),
+            )
+          else
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+        ],
+      ),
+    );
+    if (cleaned ?? false) {
+      setState(() => _body.text = TextDiagnostics.sanitize(_body.text));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hidden characters removed.')),
+        );
+      }
+    }
   }
 
   Future<void> _save() async {

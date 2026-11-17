@@ -111,18 +111,22 @@ class ChordDocument {
 
   static bool _looksLikeChord(String raw) {
     return RegExp(
-      r'^[A-G][#b♯♭]?(?:maj|min|m|dim|aug|sus|add|M|ø|°)?[0-9()+#b♯♭ø°susmajaddalt/]*$',
+      r'^[A-G][#b♯♭]?(?:maj|min|m|dim|aug|sus|add|M|ø|°)?[0-9()+#b♯♭ø°susmajaddalt]*(?:/[A-G][#b♯♭]?)?$',
     ).hasMatch(raw);
   }
 }
 
 /// One chord-anchored render unit of a sheet line: an optional chord label
-/// above a run of lyric text.
+/// (with an optional repeat badge, e.g. `2X`) above a run of lyric text.
 @immutable
 class SheetUnit {
-  const SheetUnit({this.chord, required this.text});
+  const SheetUnit({this.chord, this.badge, required this.text});
 
   final String? chord;
+
+  /// Repeat annotation for [chord], e.g. `2X` — rendered beside the chord.
+  final String? badge;
+
   final String text;
 }
 
@@ -143,19 +147,28 @@ List<SheetUnit> unitsForLine(Line line) {
 List<SheetUnit> _computeUnits(Line line) {
   final units = <_UnitBuilder>[];
   String? pendingChord;
+  String? pendingBadge;
 
-  void addUnit(String? chord, String text) {
+  void addUnit(String? chord, String text, {String? badge}) {
     if (text.isEmpty && chord == null) return;
-    units.add(_UnitBuilder(chord: chord, text: text));
+    units.add(_UnitBuilder(chord: chord, badge: badge, text: text));
   }
 
   for (final token in line.tokens) {
     switch (token) {
       case ChordToken():
         if (pendingChord != null) {
-          addUnit(pendingChord, '');
+          addUnit(pendingChord, '', badge: pendingBadge);
+          pendingBadge = null;
         }
-        pendingChord = token.chord?.raw ?? token.raw;
+        // A repeat marker (`[×2]`, `[2X]`) rides along on the pending
+        // chord instead of replacing it.
+        final repeat = token.chord == null ? _repeatBadge(token.raw) : null;
+        if (repeat != null && pendingChord != null) {
+          pendingBadge = repeat;
+        } else if (repeat == null) {
+          pendingChord = token.chord?.raw ?? token.raw;
+        }
       case TextToken():
         final chunks = splitIntoWordChunks(token.text);
         if (chunks.isEmpty) continue;
@@ -163,15 +176,23 @@ List<SheetUnit> _computeUnits(Line line) {
           final isFirst = i == 0;
           if (chunks.length == 1 && chunks[i].trim().isEmpty) {
             if (pendingChord != null) {
-              addUnit(pendingChord, chunks[i]);
+              addUnit(pendingChord, chunks[i], badge: pendingBadge);
               pendingChord = null;
+              pendingBadge = null;
             } else if (units.isNotEmpty) {
               units.last.text.write(chunks[i]);
             }
             continue;
           }
-          addUnit(isFirst ? pendingChord : null, chunks[i]);
-          if (isFirst) pendingChord = null;
+          addUnit(
+            isFirst ? pendingChord : null,
+            chunks[i],
+            badge: isFirst ? pendingBadge : null,
+          );
+          if (isFirst) {
+            pendingChord = null;
+            pendingBadge = null;
+          }
         }
       case AnnotationToken():
         addUnit(pendingChord, '*${token.text}');
@@ -184,19 +205,34 @@ List<SheetUnit> _computeUnits(Line line) {
   }
 
   if (pendingChord != null) {
-    addUnit(pendingChord, '');
+    addUnit(pendingChord, '', badge: pendingBadge);
   }
   return units
       .map(
-        (builder) => SheetUnit(chord: builder.chord, text: builder.text.toString()),
+        (builder) => SheetUnit(
+          chord: builder.chord,
+          badge: builder.badge,
+          text: builder.text.toString(),
+        ),
       )
       .toList(growable: false);
 }
 
+/// A repeat marker carried as a bare bracket (`[×2]`, `[2X]`, `[x3]`) —
+/// normalized to a display label like `2X`, or null when the raw text is
+/// not a repeat count.
+String? _repeatBadge(String raw) {
+  final match = RegExp(r'^[×xX]?\s*(\d+)\s*[xX×]?$').firstMatch(raw);
+  if (match == null) return null;
+  return '${match.group(1)}X';
+}
+
 class _UnitBuilder {
-  _UnitBuilder({this.chord, required String text}) : text = StringBuffer(text);
+  _UnitBuilder({this.chord, this.badge, required String text})
+    : text = StringBuffer(text);
 
   final String? chord;
+  final String? badge;
   final StringBuffer text;
 }
 

@@ -1,5 +1,6 @@
 import 'package:chord_plane/core/chords/chord_document.dart';
 import 'package:chord_plane/core/chords/chord_source.dart';
+import 'package:chord_plane/core/chords/text_diagnostics.dart';
 import 'package:chord_plane/core/utils/slug.dart';
 import 'package:chord_pro/chord_pro.dart' show AccidentalPreference;
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +31,10 @@ void main() {
 {end_of_verse}
 ''';
 
-    ChordDocument build({int transpose = 0, AccidentalPreference accidentals = AccidentalPreference.sharps}) {
+    ChordDocument build({
+      int transpose = 0,
+      AccidentalPreference accidentals = AccidentalPreference.sharps,
+    }) {
       return ChordDocument.build(
         body: body,
         originalKey: 'G',
@@ -105,7 +109,8 @@ void main() {
     });
 
     test('maps chord-only lines onto the lyric line below them', () {
-      const body = 'G          C\n'
+      const body =
+          'G          C\n'
           'Amazing grace, how sweet\n'
           'Em      D\n'
           'that saved a wretch like me';
@@ -167,7 +172,8 @@ void main() {
     });
 
     test('maps bare chords into lyric lines that already have chords', () {
-      const body = 'G      D\n'
+      const body =
+          'G      D\n'
           '[C]Amazing [Em]grace';
       final document = build(body, detectBare: true);
       expect(document.chords, ['G', 'C', 'D', 'Em']);
@@ -198,23 +204,22 @@ void main() {
     test('positions >-marked chord lines above the lyric line', () {
       expect(
         ChordSource.normalize('>  G   C\nHello world again'),
-        'He[G]llo [C]world again',
+        'Hel[G]lo w[C]orld again',
       );
       expect(
-        ChordSource.normalize('>    G    D     Em     C\n'
-            'Song lyrics here sample lyrics here'),
-        'Song[G] lyri[D]cs her[Em]e sampl[C]e lyrics here',
+        ChordSource.normalize(
+          '>    G    D     Em     C\n'
+          'Song lyrics here sample lyrics here',
+        ),
+        'Song [G]lyric[D]s here[Em] sample[C] lyrics here',
       );
     });
 
     test('renders explicit chord lines as rows when no lyric follows', () {
-      expect(
-        ChordSource.normalize('<G   D>\n\nLyrics'),
-        '[G]   [D]\n\nLyrics',
-      );
+      expect(ChordSource.normalize('<G   D>\n\nLyrics'), '[G]   [D]\n\nLyrics');
       expect(
         ChordSource.normalize('>  G   C\n\nLyrics'),
-        '  [G]   [C]\n\nLyrics',
+        '   [G]   [C]\n\nLyrics',
       );
     });
 
@@ -226,7 +231,7 @@ void main() {
     test('keeps a chord line above another chord line standalone', () {
       expect(
         ChordSource.normalize('> G   C\n> Am  F\nLyrics here'),
-        ' [G]   [C]\nL[Am]yric[F]s here',
+        '  [G]   [C]\nLy[Am]rics[F] here',
       );
     });
 
@@ -242,6 +247,342 @@ void main() {
         transpose: 2,
       );
       expect(document.chords, ['A', 'E', 'D']);
+    });
+
+    test('aligns > chords with lyrics that start with a space', () {
+      expect(
+        ChordSource.normalize(
+          '>C             G    Dsus4 D\n Worship His holy name.',
+        ),
+        ' [C]Worship His ho[G]ly na[Dsus4]me.[D]',
+      );
+    });
+
+    test('keeps chords past the end of a shorter lyric line', () {
+      expect(
+        ChordSource.normalize(
+          '>     C              D       C/G G C/G G \n'
+          " I'll worship Your holy name.",
+        ),
+        " I'll [C]worship Your ho[D]ly name.[C/G][G][C/G][G]",
+      );
+    });
+
+    test('converts plain section headers', () {
+      const body =
+          'Chorus:\n'
+          '>C  G\n'
+          ' lyrics one\n'
+          '\n'
+          'Verse 1:\n'
+          '>Em\n'
+          ' lyrics two';
+      final document = build(body);
+      expect(document.chords, ['C', 'G', 'Em']);
+      final labels = document.song.activeSections
+          .map(sectionLabel)
+          .whereType<String>()
+          .toList();
+      expect(labels, containsAll(['Chorus', 'Verse 1']));
+    });
+
+    test('keeps ordinary colon lines as lyric text', () {
+      const body = 'Love: a story\n>  C\n Words here';
+      final document = build(body);
+      expect(document.chords, ['C']);
+      expect(ChordSource.normalize(body).startsWith('Love: a story'), isTrue);
+    });
+
+    test('parses the 10,000 Reasons chorus arrangement', () {
+      const body =
+          'Chorus:\n'
+          '>          C          G     D/F# Em\n'
+          ' Bless the Lord, O my soul, O my soul,\n'
+          '>C             G    Dsus4 D\n'
+          ' Worship His holy name.\n'
+          '>          C        Em   C D  Em\n'
+          ' Sing like never before, 0 my soul.\n'
+          '>     C              D       C/G G C/G G \n'
+          " I'll worship Your holy name.";
+      final document = build(body);
+      expect(document.chords, ['C', 'G', 'D/F#', 'Em', 'Dsus4', 'D', 'C/G']);
+      expect(ChordSource.normalize(body).split('\n').take(3).toList(), [
+        '{start_of_chorus: Chorus}',
+        ' Bless the [C]Lord, O my [G]soul, [D/F#]O my [Em]soul,',
+        ' [C]Worship His ho[G]ly na[Dsus4]me.[D]',
+      ]);
+    });
+
+    test('parses attached repeat annotations like G(2X)', () {
+      expect(
+        ChordSource.normalize(
+          '>     C            D    G(2X)\n'
+          " I'll worship Your holy name.",
+        ),
+        " I'll [C]worship Your [D]holy [G][×2]name.",
+      );
+      final document = build('>  C   G(2X)\n lyrics here');
+      expect(document.chords, ['C', 'G']);
+      final transposed = ChordDocument.build(
+        body: '>  C   G(2X)\n lyrics here',
+        originalKey: 'C',
+        transpose: 2,
+      );
+      expect(transposed.chords, ['D', 'A']);
+    });
+
+    test('attaches a standalone repeat token to the previous chord', () {
+      expect(
+        ChordSource.normalize('>  C   G   D  2X\n lyrics here'),
+        ' ly[C]rics[G] her[D][×2]e',
+      );
+      // A standalone repeat with no chord before it keeps the line literal.
+      const body = '>  2X\n lyrics here';
+      expect(ChordSource.normalize(body), body);
+    });
+
+    test('tolerates hold dashes on chord lines', () {
+      expect(
+        ChordSource.normalize(
+          '>     C            D    C  G ---\n'
+          " I'll worship Your holy name",
+        ),
+        " I'll [C]worship Your [D]holy [C]nam[G]e",
+      );
+      // Dashes keep their spacing in a standalone chord row.
+      expect(
+        ChordSource.normalize('>  C  --  G\n\nlyrics'),
+        '   [C]  --  [G]\n\nlyrics',
+      );
+    });
+
+    test('tolerates non-breaking spaces in pasted chord lines', () {
+      expect(
+        ChordSource.normalize(
+          '>C\u00A0\u00A0\u00A0\u00A0\u00A0G\u00A0\u00A0Dsus4\u00A0D\n'
+          ' Worship His holy name.',
+        ),
+        ' [C]Worshi[G]p H[Dsus4]is hol[D]y name.',
+      );
+    });
+
+    test('supports notes after plain section headers', () {
+      const body = 'Instrumental:(Do Chorus chords)\n>  C  G\n lyrics here';
+      final document = build(body);
+      final labels = document.song.activeSections
+          .map(sectionLabel)
+          .whereType<String>()
+          .toList();
+      expect(labels, ['Instrumental (Do Chorus chords)']);
+      expect(document.chords, ['C', 'G']);
+    });
+
+    test('turns an intro header with a progression into a chord row', () {
+      const body = 'Intro:< C G D Em  C G D >\n\nChorus:\n>  C\n lyrics';
+      final normalized = ChordSource.normalize(body);
+      expect(normalized.split('\n').first, '{start_of_intro: Intro}');
+      final document = ChordDocument.build(
+        body: body,
+        originalKey: 'C',
+        transpose: 0,
+      );
+      expect(document.chords, containsAll(['C', 'G', 'D', 'Em']));
+      final labels = document.song.activeSections
+          .map(sectionLabel)
+          .whereType<String>()
+          .toList();
+      expect(labels, containsAll(['Intro', 'Chorus']));
+    });
+
+    test('keeps mixed wrapped and bare chords on one line', () {
+      // Standalone: all chords on one row, spacing and holds preserved.
+      expect(
+        ChordSource.normalize('<G> Asus4 ---x\n\nlyrics'),
+        '[G] [Asus4] ---x\n\nlyrics',
+      );
+      expect(
+        ChordSource.normalize('<D> <Bm> A7sus4\n\nlyrics'),
+        '[D] [Bm] [A7sus4]\n\nlyrics',
+      );
+      // Above a lyric line: anchored at the typed columns.
+      expect(
+        ChordSource.normalize('<G> Asus4\nlyrics here'),
+        '[G]lyri[Asus4]cs here',
+      );
+    });
+
+    test('recognizes mixed chord rows even when detectBare is off', () {
+      const body = '<G> Asus4 ---x\n\nlyrics';
+      final document = ChordDocument.build(
+        body: body,
+        originalKey: 'G',
+        transpose: 0,
+      );
+      expect(document.chords, ['G', 'Asus4']);
+    });
+
+    test('tolerates ---x holds on > chord lines', () {
+      expect(
+        ChordSource.normalize('>  C  ---x  G\n lyric line here'),
+        ' ly[C]ric line [G]here',
+      );
+    });
+
+    test('parses header progressions with repeats', () {
+      const first = 'Intro:< C G D Em  C G D 3X >2X\n\nChorus:\n>  C\n lyrics';
+      final normalized = ChordSource.normalize(first);
+      expect(normalized.split('\n').first, '{start_of_intro: Intro}');
+      expect(normalized.split('\n')[1], contains('[D][×3]'));
+      final document = ChordDocument.build(
+        body: first,
+        originalKey: 'C',
+        transpose: 0,
+      );
+      expect(document.chords, containsAll(['C', 'G', 'D', 'Em']));
+
+      const second = 'Intro: <Am Dm E> } 3x\n\n>  C\n lyrics';
+      final row = ChordSource.normalize(second).split('\n');
+      expect(row.first, '{start_of_intro: Intro}');
+      expect(row[1], contains('[Am] [Dm] [E][×3]'));
+      final secondDoc = ChordDocument.build(
+        body: second,
+        originalKey: 'C',
+        transpose: 0,
+      );
+      expect(secondDoc.chords, containsAll(['Am', 'Dm', 'E']));
+    });
+
+    test('accepts lone > markers between chords on a chord line', () {
+      expect(
+        ChordSource.normalize('>Bm        >     A\nAll my past is washed away'),
+        'A[Bm]ll my past is wa[A]shed away',
+      );
+    });
+
+    test('recognizes colon-less section headers', () {
+      const body =
+          'Verse1\n>G   Bm\n my first line\n\n'
+          'Prechorus\n>Bm    >  A\n all my past\n\n'
+          'Chorus\n>  G\n all my life';
+      final document = ChordDocument.build(
+        body: body,
+        originalKey: 'G',
+        transpose: 0,
+      );
+      final labels = document.song.activeSections
+          .map(sectionLabel)
+          .whereType<String>()
+          .toList();
+      expect(labels, containsAll(['Verse 1', 'Prechorus', 'Chorus']));
+      expect(document.chords, containsAll(['G', 'Bm', 'A']));
+    });
+
+    test('keeps tab lines verbatim and off the chord mapping', () {
+      const body =
+          '<F>  <Bb> <Dm>\n'
+          'e|-----6----5----1----|\n'
+          'B|10---6----6----1----|\n'
+          'E------6---------1----|';
+      final normalized = ChordSource.normalize(body);
+      final lines = normalized.split('\n');
+      expect(lines.first, '[F]  [Bb] [Dm]');
+      expect(lines[1], 'e|-----6----5----1----|');
+      expect(lines[2], 'B|10---6----6----1----|');
+      expect(lines[3], 'E------6---------1----|');
+      expect(normalized.contains('[B]'), isFalse);
+      expect(normalized.contains('[E]'), isFalse);
+      const single =
+          '<Bb>              <Dsus2>\n'
+          'e|--------------------------------|';
+      final singleNorm = ChordSource.normalize(single).split('\n');
+      expect(singleNorm.first, contains('[Bb]'));
+      expect(singleNorm.first, contains('[Dsus2]'));
+      expect(singleNorm[1], 'e|--------------------------------|');
+    });
+
+    test('maps single-chord groups above their lyric lines', () {
+      const body =
+          '[Verse 3]\n'
+          '      <Ebm>           <Ab7>\n'
+          "To any outlaw tryin to draw, thinkin you're bad";
+      final document = ChordDocument.build(
+        body: body,
+        originalKey: 'Eb',
+        transpose: 0,
+      );
+      expect(document.chords, ['Ebm', 'Ab7']);
+      final labels = document.song.activeSections
+          .map(sectionLabel)
+          .whereType<String>()
+          .toList();
+      expect(labels, ['Verse 3']);
+      expect(ChordSource.normalize(body).split('\n')[1], contains('[Ebm]'));
+    });
+  });
+
+  group('paste hardening', () {
+    test('zero-width characters do not break > chord lines', () {
+      final normalized = ChordSource.normalize(
+        '>\u200B C \u200B\u200BG(2X)\n lyrics here',
+      );
+      expect(normalized.contains('\u200B'), isFalse);
+      expect(normalized.contains('[C]'), isTrue);
+      expect(normalized.contains('[G][×2]'), isTrue);
+      final document = ChordDocument.build(
+        body: '>\u200B C \u200B\u200BG(2X)\n lyrics here',
+        originalKey: 'C',
+        transpose: 0,
+      );
+      expect(document.chords, ['C', 'G']);
+    });
+
+    test('non-breaking spaces are normalized everywhere', () {
+      final normalized = ChordSource.normalize(
+        '>C\u00A0\u00A0G\n\u00A0lyr\u00A0ics',
+      );
+      expect(normalized.contains('\u00A0'), isFalse);
+      expect(normalized.contains('[C]'), isTrue);
+      expect(normalized.contains('[G]'), isTrue);
+    });
+
+    test('fullwidth angle brackets act as their ASCII equivalents', () {
+      final normalized = ChordSource.normalize('＞C   G\n lyrics here');
+      expect(normalized.contains('＞'), isFalse);
+      expect(normalized.contains('[C]'), isTrue);
+      expect(normalized.contains('[G]'), isTrue);
+    });
+
+    test('line separators are treated as newlines', () {
+      final normalized = ChordSource.normalize(
+        'Chorus:\u2028>  C   G\n lyrics here',
+      );
+      expect(normalized.contains('\u2028'), isFalse);
+      expect(normalized, contains('{start_of_chorus: Chorus}'));
+      expect(normalized.contains('[C]'), isTrue);
+      expect(normalized.contains('[G]'), isTrue);
+    });
+
+    test('sanitize never alters visible text', () {
+      expect(
+        TextDiagnostics.sanitize('Am\u00A0G\u200B\u200D7---\uFEFF'),
+        'Am G7---',
+      );
+    });
+
+    test('scan reports the right lines and codes', () {
+      final findings = TextDiagnostics.scan(
+        'clean line\nbad\u00A0line\u200Bhere\n\talso fine',
+      );
+      expect(findings.map((f) => (f.line, f.code)).toList(), [
+        (2, 0x00A0),
+        (2, 0x200B),
+      ]);
+      expect(findings.first.tag, '<U+00A0>');
+    });
+
+    test('reveal makes hidden characters visible', () {
+      expect(TextDiagnostics.reveal('>\u00A0C\u200B'), '><U+00A0>C<U+200B>');
+      expect(TextDiagnostics.reveal('a\tb'), 'a<TAB>b');
     });
   });
 }
