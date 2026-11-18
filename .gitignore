@@ -3,6 +3,10 @@ android/key.properties
 keys/
 *.keystore
 
+# Locally packaged release artifacts (CI uploads these to GitHub Releases)
+/chordplane-latest.apk
+/chordplane-latest.apk.sha256
+
 # Miscellaneous
 *.class
 *.log

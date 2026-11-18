@@ -665,6 +665,22 @@ class _PageScaffold extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
+              TextButton(
+                onPressed: () => _openDownload(context),
+                style: TextButton.styleFrom(
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Get ChordPlane for Android',
+                  style: TextStyle(fontSize: 11.5),
+                ),
+              ),
             ],
           ),
         ),
@@ -681,6 +697,17 @@ class _PageScaffold extends StatelessWidget {
       );
     } catch (_) {
       // No handler on this device — the page stays usable.
+    }
+  }
+
+  Future<void> _openDownload(BuildContext context) async {
+    try {
+      await launchUrl(
+        Uri.parse(WebViewerConfig.downloadUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      // Navigation failed — the page stays usable.
     }
   }
 }
@@ -753,9 +780,34 @@ class HomeLandingScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 20),
+          FilledButton.tonalIcon(
+            onPressed: () => _openDownload(),
+            icon: const Icon(Icons.android, size: 19),
+            label: const Text('Get the app for Android'),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Free · iOS coming soon',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _openDownload() async {
+    try {
+      await launchUrl(
+        Uri.parse(WebViewerConfig.downloadUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      // Navigation failed — the page stays usable.
+    }
   }
 }
 

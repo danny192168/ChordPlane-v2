@@ -7,6 +7,12 @@
 class WebViewerConfig {
   const WebViewerConfig._();
 
+  /// Public host for the share viewer and the download page.
+  static const String siteUrl = 'https://chordplane.citcs.site';
+
+  /// Download page for the Android build (iOS is not published yet).
+  static String get downloadUrl => '$siteUrl/download';
+
   static const String supabaseUrl = 'https://eweppodjncodtsiljvak.supabase.co';
 
   /// Publishable (anon) key for REST reads of `shared_bundles`.

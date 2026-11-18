@@ -75,6 +75,50 @@ flutter analyze
 
 Minimums: Android API 24, iOS 15 (set by `chord_diagrams`).
 
+## Android releases and the download page
+
+The download page lives at <https://chordplane.citcs.site/download>. It is a
+static HTML/CSS page in `web/download/`, which Flutter copies into
+`build/web/download/`; the existing web-viewer deploy publishes it without any
+extra steps. The page and the app both point at one stable asset name:
+
+```
+https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk
+```
+
+To publish a build:
+
+1. Bump `version:` in `pubspec.yaml` if you also build locally (the tag wins
+   for CI builds).
+2. Tag and push:
+
+```sh
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+The `Release Android APK` workflow builds a signed release APK, uploads
+`chordplane-latest.apk` and `chordplane-latest.apk.sha256`, and marks the release
+as latest — which moves both the `/download` button and the in-viewer
+“Get the app” link. `workflow_dispatch` accepts a tag name for re-running a
+release without re-pushing the tag.
+
+Signing secrets (`Settings → Secrets and variables → Actions`):
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | `base64 -i keys/chordplane-release.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `ANDROID_KEY_ALIAS` | key alias |
+| `ANDROID_KEY_PASSWORD` | key password |
+
+Optional repository variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` override
+the compiled-in cloud credentials; the workflow otherwise falls back to the
+same public project the web viewer uses. Without them the APK still installs
+and works locally, but cloud share links are disabled.
+
+iOS has no public build yet; the page shows it as “coming soon”.
+
 ## Project layout
 
 ```
