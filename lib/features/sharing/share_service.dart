@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/chords/chord_detection.dart';
 import '../../core/db/app_database.dart';
 import '../../core/utils/slug.dart';
 import '../setlists/data/setlist_repository.dart';
@@ -189,6 +190,7 @@ class ShareService {
         artist: song.artist,
         body: song.body,
         originalKey: song.originalKey,
+        chordDetectionMode: song.chordDetectionMode,
         capo: song.capo,
         tempo: song.tempo,
         instrument: song.instrument,
@@ -205,6 +207,9 @@ class ShareService {
       artist: row.artist,
       body: row.body,
       originalKey: row.originalKey,
+      chordDetectionMode: ChordDetectionMode.fromStorage(
+        row.chordDetectionMode,
+      ),
       capo: row.capo,
       tempo: row.tempo,
       instrument: row.instrument,

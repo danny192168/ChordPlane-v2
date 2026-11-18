@@ -82,6 +82,18 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _chordDetectionModeMeta =
+      const VerificationMeta('chordDetectionMode');
+  @override
+  late final GeneratedColumn<String> chordDetectionMode =
+      GeneratedColumn<String>(
+        'chord_detection_mode',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('auto'),
+      );
   static const VerificationMeta _capoMeta = const VerificationMeta('capo');
   @override
   late final GeneratedColumn<int> capo = GeneratedColumn<int>(
@@ -223,6 +235,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
     artistSlug,
     body,
     originalKey,
+    chordDetectionMode,
     capo,
     tempo,
     instrument,
@@ -291,6 +304,15 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
         originalKey.isAcceptableOrUnknown(
           data['original_key']!,
           _originalKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('chord_detection_mode')) {
+      context.handle(
+        _chordDetectionModeMeta,
+        chordDetectionMode.isAcceptableOrUnknown(
+          data['chord_detection_mode']!,
+          _chordDetectionModeMeta,
         ),
       );
     }
@@ -407,6 +429,10 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
         DriftSqlType.string,
         data['${effectivePrefix}original_key'],
       )!,
+      chordDetectionMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chord_detection_mode'],
+      )!,
       capo: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}capo'],
@@ -472,6 +498,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
   final String artistSlug;
   final String body;
   final String originalKey;
+  final String chordDetectionMode;
   final int capo;
   final int? tempo;
   final String instrument;
@@ -492,6 +519,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     required this.artistSlug,
     required this.body,
     required this.originalKey,
+    required this.chordDetectionMode,
     required this.capo,
     this.tempo,
     required this.instrument,
@@ -515,6 +543,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     map['artist_slug'] = Variable<String>(artistSlug);
     map['body'] = Variable<String>(body);
     map['original_key'] = Variable<String>(originalKey);
+    map['chord_detection_mode'] = Variable<String>(chordDetectionMode);
     map['capo'] = Variable<int>(capo);
     if (!nullToAbsent || tempo != null) {
       map['tempo'] = Variable<int>(tempo);
@@ -543,6 +572,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       artistSlug: Value(artistSlug),
       body: Value(body),
       originalKey: Value(originalKey),
+      chordDetectionMode: Value(chordDetectionMode),
       capo: Value(capo),
       tempo: tempo == null && nullToAbsent
           ? const Value.absent()
@@ -575,6 +605,9 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       artistSlug: serializer.fromJson<String>(json['artistSlug']),
       body: serializer.fromJson<String>(json['body']),
       originalKey: serializer.fromJson<String>(json['originalKey']),
+      chordDetectionMode: serializer.fromJson<String>(
+        json['chordDetectionMode'],
+      ),
       capo: serializer.fromJson<int>(json['capo']),
       tempo: serializer.fromJson<int?>(json['tempo']),
       instrument: serializer.fromJson<String>(json['instrument']),
@@ -600,6 +633,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       'artistSlug': serializer.toJson<String>(artistSlug),
       'body': serializer.toJson<String>(body),
       'originalKey': serializer.toJson<String>(originalKey),
+      'chordDetectionMode': serializer.toJson<String>(chordDetectionMode),
       'capo': serializer.toJson<int>(capo),
       'tempo': serializer.toJson<int?>(tempo),
       'instrument': serializer.toJson<String>(instrument),
@@ -623,6 +657,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     String? artistSlug,
     String? body,
     String? originalKey,
+    String? chordDetectionMode,
     int? capo,
     Value<int?> tempo = const Value.absent(),
     String? instrument,
@@ -643,6 +678,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     artistSlug: artistSlug ?? this.artistSlug,
     body: body ?? this.body,
     originalKey: originalKey ?? this.originalKey,
+    chordDetectionMode: chordDetectionMode ?? this.chordDetectionMode,
     capo: capo ?? this.capo,
     tempo: tempo.present ? tempo.value : this.tempo,
     instrument: instrument ?? this.instrument,
@@ -669,6 +705,9 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       originalKey: data.originalKey.present
           ? data.originalKey.value
           : this.originalKey,
+      chordDetectionMode: data.chordDetectionMode.present
+          ? data.chordDetectionMode.value
+          : this.chordDetectionMode,
       capo: data.capo.present ? data.capo.value : this.capo,
       tempo: data.tempo.present ? data.tempo.value : this.tempo,
       instrument: data.instrument.present
@@ -700,6 +739,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
           ..write('artistSlug: $artistSlug, ')
           ..write('body: $body, ')
           ..write('originalKey: $originalKey, ')
+          ..write('chordDetectionMode: $chordDetectionMode, ')
           ..write('capo: $capo, ')
           ..write('tempo: $tempo, ')
           ..write('instrument: $instrument, ')
@@ -725,6 +765,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     artistSlug,
     body,
     originalKey,
+    chordDetectionMode,
     capo,
     tempo,
     instrument,
@@ -749,6 +790,7 @@ class SongRow extends DataClass implements Insertable<SongRow> {
           other.artistSlug == this.artistSlug &&
           other.body == this.body &&
           other.originalKey == this.originalKey &&
+          other.chordDetectionMode == this.chordDetectionMode &&
           other.capo == this.capo &&
           other.tempo == this.tempo &&
           other.instrument == this.instrument &&
@@ -771,6 +813,7 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
   final Value<String> artistSlug;
   final Value<String> body;
   final Value<String> originalKey;
+  final Value<String> chordDetectionMode;
   final Value<int> capo;
   final Value<int?> tempo;
   final Value<String> instrument;
@@ -792,6 +835,7 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     this.artistSlug = const Value.absent(),
     this.body = const Value.absent(),
     this.originalKey = const Value.absent(),
+    this.chordDetectionMode = const Value.absent(),
     this.capo = const Value.absent(),
     this.tempo = const Value.absent(),
     this.instrument = const Value.absent(),
@@ -814,6 +858,7 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     this.artistSlug = const Value.absent(),
     this.body = const Value.absent(),
     this.originalKey = const Value.absent(),
+    this.chordDetectionMode = const Value.absent(),
     this.capo = const Value.absent(),
     this.tempo = const Value.absent(),
     this.instrument = const Value.absent(),
@@ -839,6 +884,7 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     Expression<String>? artistSlug,
     Expression<String>? body,
     Expression<String>? originalKey,
+    Expression<String>? chordDetectionMode,
     Expression<int>? capo,
     Expression<int>? tempo,
     Expression<String>? instrument,
@@ -861,6 +907,8 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
       if (artistSlug != null) 'artist_slug': artistSlug,
       if (body != null) 'body': body,
       if (originalKey != null) 'original_key': originalKey,
+      if (chordDetectionMode != null)
+        'chord_detection_mode': chordDetectionMode,
       if (capo != null) 'capo': capo,
       if (tempo != null) 'tempo': tempo,
       if (instrument != null) 'instrument': instrument,
@@ -885,6 +933,7 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     Value<String>? artistSlug,
     Value<String>? body,
     Value<String>? originalKey,
+    Value<String>? chordDetectionMode,
     Value<int>? capo,
     Value<int?>? tempo,
     Value<String>? instrument,
@@ -907,6 +956,7 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
       artistSlug: artistSlug ?? this.artistSlug,
       body: body ?? this.body,
       originalKey: originalKey ?? this.originalKey,
+      chordDetectionMode: chordDetectionMode ?? this.chordDetectionMode,
       capo: capo ?? this.capo,
       tempo: tempo ?? this.tempo,
       instrument: instrument ?? this.instrument,
@@ -946,6 +996,9 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     }
     if (originalKey.present) {
       map['original_key'] = Variable<String>(originalKey.value);
+    }
+    if (chordDetectionMode.present) {
+      map['chord_detection_mode'] = Variable<String>(chordDetectionMode.value);
     }
     if (capo.present) {
       map['capo'] = Variable<int>(capo.value);
@@ -999,6 +1052,7 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
           ..write('artistSlug: $artistSlug, ')
           ..write('body: $body, ')
           ..write('originalKey: $originalKey, ')
+          ..write('chordDetectionMode: $chordDetectionMode, ')
           ..write('capo: $capo, ')
           ..write('tempo: $tempo, ')
           ..write('instrument: $instrument, ')
@@ -3780,6 +3834,7 @@ typedef $$SongsTableCreateCompanionBuilder = SongsCompanion Function({
   Value<String> artistSlug,
   Value<String> body,
   Value<String> originalKey,
+  Value<String> chordDetectionMode,
   Value<int> capo,
   Value<int?> tempo,
   Value<String> instrument,
@@ -3802,6 +3857,7 @@ typedef $$SongsTableUpdateCompanionBuilder = SongsCompanion Function({
   Value<String> artistSlug,
   Value<String> body,
   Value<String> originalKey,
+  Value<String> chordDetectionMode,
   Value<int> capo,
   Value<int?> tempo,
   Value<String> instrument,
@@ -3898,6 +3954,11 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
 
   ColumnFilters<String> get originalKey => $composableBuilder(
     column: $table.originalKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get chordDetectionMode => $composableBuilder(
+    column: $table.chordDetectionMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4056,6 +4117,11 @@ class $$SongsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get chordDetectionMode => $composableBuilder(
+    column: $table.chordDetectionMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get capo => $composableBuilder(
     column: $table.capo,
     builder: (column) => ColumnOrderings(column),
@@ -4148,6 +4214,11 @@ class $$SongsTableAnnotationComposer
 
   GeneratedColumn<String> get originalKey => $composableBuilder(
     column: $table.originalKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get chordDetectionMode => $composableBuilder(
+    column: $table.chordDetectionMode,
     builder: (column) => column,
   );
 
@@ -4279,6 +4350,7 @@ class $$SongsTableTableManager
                 Value<String> artistSlug = const Value.absent(),
                 Value<String> body = const Value.absent(),
                 Value<String> originalKey = const Value.absent(),
+                Value<String> chordDetectionMode = const Value.absent(),
                 Value<int> capo = const Value.absent(),
                 Value<int?> tempo = const Value.absent(),
                 Value<String> instrument = const Value.absent(),
@@ -4300,6 +4372,7 @@ class $$SongsTableTableManager
                 artistSlug: artistSlug,
                 body: body,
                 originalKey: originalKey,
+                chordDetectionMode: chordDetectionMode,
                 capo: capo,
                 tempo: tempo,
                 instrument: instrument,
@@ -4323,6 +4396,7 @@ class $$SongsTableTableManager
                 Value<String> artistSlug = const Value.absent(),
                 Value<String> body = const Value.absent(),
                 Value<String> originalKey = const Value.absent(),
+                Value<String> chordDetectionMode = const Value.absent(),
                 Value<int> capo = const Value.absent(),
                 Value<int?> tempo = const Value.absent(),
                 Value<String> instrument = const Value.absent(),
@@ -4344,6 +4418,7 @@ class $$SongsTableTableManager
                 artistSlug: artistSlug,
                 body: body,
                 originalKey: originalKey,
+                chordDetectionMode: chordDetectionMode,
                 capo: capo,
                 tempo: tempo,
                 instrument: instrument,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/chords/chord_detection.dart';
 import '../../../core/chords/text_diagnostics.dart';
 import '../../../core/settings/settings.dart';
 import '../data/song_providers.dart';
@@ -34,6 +35,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
   bool _saving = false;
   bool _preview = false;
   bool _notFound = false;
+  ChordDetectionMode _chordMode = ChordDetectionMode.auto;
 
   bool get _isEditing => widget.songId != null;
 
@@ -43,6 +45,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     if (_isEditing) {
       _load();
     } else {
+      _chordMode = ref.read(settingsProvider).defaultChordDetectionMode;
       _loading = false;
     }
   }
@@ -78,6 +81,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     _youtube.text = song.youtubeUrl;
     _tags.text = song.tags;
     _body.text = song.body;
+    _chordMode = ChordDetectionMode.fromStorage(song.chordDetectionMode);
     setState(() => _loading = false);
   }
 
@@ -97,7 +101,6 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     }
 
     final theme = Theme.of(context);
-    final settings = ref.watch(settingsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -237,55 +240,8 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              value: settings.detectBareChords,
-              onChanged: (value) => ref
-                  .read(settingsProvider.notifier)
-                  .setDetectBareChords(value),
-              title: const Text(
-                'Detect chords without < >',
-                style: TextStyle(fontSize: 14),
-              ),
-              subtitle: const Text(
-                'Ultimate-Guitar-style chords, picked up automatically',
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              settings.detectBareChords
-                  ? 'Chords can be wrapped in < > — <G> or a whole progression '
-                        'like <G D Em C> — or written ChordPro-style: [Am]Hello '
-                        'world. Chord-only lines above lyrics (Ultimate Guitar '
-                        'format) are detected too. A line made only of < > '
-                        'groups (<G      D     Em>) or starting with > '
-                        '(>   G   D   Em) positions its chords by their '
-                        'spacing above the next lyric line — the > counts as '
-                        'the lyric line\u2019s first column. Repeats like '
-                        'G(2X) or a trailing 2X show as a badge; ---x holds '
-                        'and tab lines are kept as typed. Headers can be '
-                        '[Chorus], Chorus:, or just Intro / Verse1 / '
-                        'Prechorus on their own line, optionally with a '
-                        'progression (Intro: <Am Dm E> } 3x).'
-                  : 'Bare chord detection is off, so wrap your chords in '
-                        '< > — e.g. <G> or <G D Em C> — right before the '
-                        'syllable. ChordPro [Am] brackets work too. A line '
-                        'made only of < > groups (<G      D     Em>) or '
-                        'starting with > (>   G   D   Em) positions its '
-                        'chords by their spacing above the next lyric line — '
-                        'the > counts as the lyric line\u2019s first column. '
-                        'Repeats like G(2X) show as a badge. Headers can be '
-                        '[Chorus], Chorus:, or just Intro / Verse1 on their '
-                        'own line, optionally with a progression '
-                        '(Intro: <Am Dm E> } 3x).',
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            const SizedBox(height: 8),
+            _buildDetectionSelector(theme),
             const SizedBox(height: 10),
             if (_preview)
               _buildPreview(theme)
@@ -331,6 +287,49 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     );
   }
 
+  /// Lets the user choose how this song's chords are recognized. The
+  /// choice is stored with the song, so it survives sharing and imports.
+  Widget _buildDetectionSelector(ThemeData theme) {
+    final defaultMode = ref.watch(settingsProvider).defaultChordDetectionMode;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Chord detection',
+            isDense: true,
+            contentPadding: EdgeInsets.fromLTRB(12, 10, 8, 10),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<ChordDetectionMode>(
+              isExpanded: true,
+              isDense: true,
+              value: _chordMode,
+              items: [
+                for (final mode in ChordDetectionMode.values)
+                  DropdownMenuItem(value: mode, child: Text(mode.label)),
+              ],
+              onChanged: (mode) {
+                if (mode == null) return;
+                setState(() => _chordMode = mode);
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${_chordMode.description} '
+          '${_chordMode == ChordDetectionMode.chordProOnly ? 'Write chords as [Am] and sections as {start_of_verse: Verse 1}.' : 'Wrap chords in < > (<G> or <G D Em C>) or use ChordPro [Am] brackets; a line of < > groups or starting with > positions chords above the next lyric line.'}'
+          '${_chordMode == defaultMode ? '' : ' Default for new songs: ${defaultMode.label}.'}',
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPreview(ThemeData theme) {
     final settings = ref.watch(settingsProvider);
     final document = ref.watch(
@@ -338,7 +337,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
         body: _body.text,
         originalKey: _key.text,
         transpose: 0,
-        detectBare: settings.detectBareChords,
+        mode: _chordMode,
       )),
     );
 
@@ -535,6 +534,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
       artist: _artist.text,
       body: _body.text,
       originalKey: _key.text.trim(),
+      chordDetectionMode: _chordMode,
       capo: capo.clamp(0, 12),
       tempo: tempo?.clamp(20, 400),
       youtubeUrl: _youtube.text,

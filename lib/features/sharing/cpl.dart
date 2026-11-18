@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
+import '../../core/chords/chord_detection.dart';
 import '../../core/config/app_config.dart';
 
 /// ChordPlane's portable, plain-JSON song/setlist format (`.cpl`).
@@ -92,6 +93,7 @@ class CplSong {
     this.artist = '',
     this.body = '',
     this.originalKey = '',
+    this.chordDetectionMode = ChordDetectionMode.auto,
     this.capo = 0,
     this.tempo,
     this.instrument = 'guitar',
@@ -104,6 +106,7 @@ class CplSong {
   final String artist;
   final String body;
   final String originalKey;
+  final ChordDetectionMode chordDetectionMode;
   final int capo;
   final int? tempo;
   final String instrument;
@@ -116,6 +119,8 @@ class CplSong {
     'artist': artist,
     'body': body,
     'originalKey': originalKey,
+    if (chordDetectionMode != ChordDetectionMode.auto)
+      'chordDetectionMode': chordDetectionMode.storageKey,
     'capo': capo,
     if (tempo != null) 'tempo': tempo,
     'instrument': instrument,
@@ -137,6 +142,9 @@ class CplSong {
       artist: _string(json['artist']),
       body: _string(json['body']),
       originalKey: _string(json['originalKey']),
+      chordDetectionMode: ChordDetectionMode.fromStorage(
+        _string(json['chordDetectionMode']),
+      ),
       capo: _int(json['capo']) ?? 0,
       tempo: _int(json['tempo']),
       instrument: _string(json['instrument'], fallback: 'guitar'),

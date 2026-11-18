@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../chords/chord_detection.dart';
+
 /// Overridden in `main()` after loading the preferences instance.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
   (ref) => throw UnimplementedError('SharedPreferences were not provided'),
@@ -13,29 +15,30 @@ class AppSettingsState {
   const AppSettingsState({
     this.themeMode = ThemeMode.system,
     this.instrument = Instrument.guitar,
-    this.detectBareChords = true,
+    this.defaultChordDetectionMode = ChordDetectionMode.auto,
     this.textScale = 1,
   });
 
   final ThemeMode themeMode;
   final Instrument instrument;
 
-  /// Whether chords without `< >` brackets — Ultimate-Guitar-style
-  /// chord-only lines and bare chord words — are detected as chords.
-  final bool detectBareChords;
+  /// The chord detection mode new songs start with. Each song stores its
+  /// own mode, so this only affects songs created from now on.
+  final ChordDetectionMode defaultChordDetectionMode;
 
   final double textScale;
 
   AppSettingsState copyWith({
     ThemeMode? themeMode,
     Instrument? instrument,
-    bool? detectBareChords,
+    ChordDetectionMode? defaultChordDetectionMode,
     double? textScale,
   }) {
     return AppSettingsState(
       themeMode: themeMode ?? this.themeMode,
       instrument: instrument ?? this.instrument,
-      detectBareChords: detectBareChords ?? this.detectBareChords,
+      defaultChordDetectionMode:
+          defaultChordDetectionMode ?? this.defaultChordDetectionMode,
       textScale: textScale ?? this.textScale,
     );
   }
@@ -44,7 +47,8 @@ class AppSettingsState {
 class SettingsController extends Notifier<AppSettingsState> {
   static const _themeKey = 'settings.themeMode';
   static const _instrumentKey = 'settings.instrument';
-  static const _detectBareKey = 'settings.detectBareChords';
+  static const _chordModeKey = 'settings.chordDetectionMode';
+  static const _legacyDetectBareKey = 'settings.detectBareChords';
   static const _textScaleKey = 'settings.textScale';
 
   SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
@@ -57,9 +61,27 @@ class SettingsController extends Notifier<AppSettingsState> {
       instrument: prefs.getString(_instrumentKey) == 'ukulele'
           ? Instrument.ukulele
           : Instrument.guitar,
-      detectBareChords: prefs.getBool(_detectBareKey) ?? true,
+      defaultChordDetectionMode: _readChordMode(prefs),
       textScale: (prefs.getDouble(_textScaleKey) ?? 1).clamp(0.7, 2.0),
     );
+  }
+
+  /// Reads the chord detection default, migrating the old on/off switch
+  /// (`true` → Auto, `false` → Brackets only) the first time.
+  static ChordDetectionMode _readChordMode(SharedPreferences prefs) {
+    final stored = prefs.getString(_chordModeKey);
+    if (stored != null) return ChordDetectionMode.fromStorage(stored);
+
+    final legacy = prefs.getBool(_legacyDetectBareKey);
+    if (legacy != null) {
+      final mode = legacy
+          ? ChordDetectionMode.auto
+          : ChordDetectionMode.bracketsOnly;
+      prefs.setString(_chordModeKey, mode.storageKey);
+      prefs.remove(_legacyDetectBareKey);
+      return mode;
+    }
+    return ChordDetectionMode.auto;
   }
 
   void setThemeMode(ThemeMode mode) {
@@ -72,9 +94,9 @@ class SettingsController extends Notifier<AppSettingsState> {
     _prefs.setString(_instrumentKey, instrument.name);
   }
 
-  void setDetectBareChords(bool enabled) {
-    state = state.copyWith(detectBareChords: enabled);
-    _prefs.setBool(_detectBareKey, enabled);
+  void setDefaultChordDetectionMode(ChordDetectionMode mode) {
+    state = state.copyWith(defaultChordDetectionMode: mode);
+    _prefs.setString(_chordModeKey, mode.storageKey);
   }
 
   void setTextScale(double scale) {

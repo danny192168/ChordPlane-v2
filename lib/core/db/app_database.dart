@@ -14,6 +14,8 @@ class Songs extends Table {
   TextColumn get artistSlug => text().withDefault(const Constant(''))();
   TextColumn get body => text().withDefault(const Constant(''))();
   TextColumn get originalKey => text().withDefault(const Constant(''))();
+  TextColumn get chordDetectionMode =>
+      text().withDefault(const Constant('auto'))();
   IntColumn get capo => integer().withDefault(const Constant(0))();
   IntColumn get tempo => integer().nullable()();
   TextColumn get instrument => text().withDefault(const Constant('guitar'))();
@@ -141,7 +143,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -149,6 +151,9 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.createTable(sharedLinks);
+      }
+      if (from < 3) {
+        await m.addColumn(songs, songs.chordDetectionMode);
       }
     },
     beforeOpen: (details) async {

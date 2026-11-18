@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'chord_detection.dart';
 import 'text_diagnostics.dart';
 
 /// One chord of a chord line: where it starts, where its raw token ends
@@ -33,9 +34,11 @@ typedef _ChordToken = ({int column, int end, String chord, int? repeat});
 ///    count as whitespace, so pastes from other apps work.
 ///  - Guitar tab lines (`e|-----6----5----`) are left verbatim and never
 ///    absorb the chord line above them.
-///  - With [detectBare]: chords without any brackets — chord-only lines
-///    placed above lyric lines (the classic Ultimate Guitar / crd format)
-///    and bare chord words inside lyric lines.
+///  - Depending on [ChordDetectionMode]: chords without any brackets —
+///    chord-only lines placed above lyric lines (the classic Ultimate
+///    Guitar / crd format) and bare chord words inside lyric lines.
+///    [ChordDetectionMode.chordProOnly] disables all rewriting, so only
+///    ChordPro brackets and directives are recognized.
 @immutable
 class ChordSource {
   const ChordSource._();
@@ -142,9 +145,15 @@ class ChordSource {
   /// line separators become newlines, and zero-width characters are
   /// dropped — the invisible characters that pastes from other apps
   /// carry and that would otherwise break chord detection.
-  static String normalize(String body, {bool detectBare = false}) {
+  static String normalize(
+    String body, {
+    ChordDetectionMode mode = ChordDetectionMode.auto,
+  }) {
     if (body.trim().isEmpty) return body;
     body = TextDiagnostics.sanitize(body);
+    // ChordPro-only mode leaves the document untouched: no angle-group
+    // conversion, no positional chord rows, no plain headers.
+    if (!mode.rewritesPlainText) return body;
 
     // Pass 1: `<G>` and `<G D Em C>` angle groups become `[G]` / `[G][D][Em][C]`.
     // Explicit positional chord lines are left untouched — their spacing
@@ -161,7 +170,7 @@ class ChordSource {
     ];
     final classified = List<_LineKind>.filled(lines.length, _LineKind.text);
     for (var i = 0; i < lines.length; i++) {
-      classified[i] = _classify(lines[i]);
+      classified[i] = _classify(lines[i], mode);
     }
 
     final out = <String>[];
@@ -219,10 +228,6 @@ class ChordSource {
           if (chordRow != null) out.add(chordRow);
           continue;
         case _LineKind.chordLine:
-          if (!detectBare) {
-            out.add(line);
-            continue;
-          }
           final tokens = _chordTokens(line)!;
           final lyricIndex = _lyricAfter(lines, classified, i + 1);
           if (lyricIndex != null) {
@@ -238,7 +243,8 @@ class ChordSource {
         case _LineKind.explicitChordLine:
           // Explicitly marked chord line (`<G      D>`, `>   G   D`, or a
           // mixed `<G> Asus4 ---x` row). Always recognized — the marker
-          // makes it unambiguous, so this does not depend on [detectBare].
+          // makes it unambiguous, so this does not depend on the chord
+          // detection mode beyond ChordPro-only, which returns early.
           final explicit =
               _explicitChordLine(line) ??
               (source: line, tokens: _chordTokens(line)!);
@@ -254,7 +260,7 @@ class ChordSource {
           }
           continue;
         case _LineKind.text:
-          out.add(_inlineChords(line, detectBare: detectBare));
+          out.add(_inlineChords(line, detectBare: mode.detectInlineBare));
           continue;
         case _LineKind.consumed:
           // Already merged into the chord line above it — drop it.
@@ -396,7 +402,7 @@ class ChordSource {
     return tokens == null ? null : (source: source, tokens: tokens);
   }
 
-  static _LineKind _classify(String line) {
+  static _LineKind _classify(String line, ChordDetectionMode mode) {
     final trimmed = line.trim();
     if (trimmed.isEmpty) return _LineKind.text;
     if (trimmed.startsWith('{')) return _LineKind.directive;
@@ -415,6 +421,7 @@ class ChordSource {
     if (line.contains('<') && _chordTokens(line) != null) {
       return _LineKind.explicitChordLine;
     }
+    if (!mode.detectChordRows) return _LineKind.text;
     if (!detectableLine(line)) return _LineKind.text;
     if (_chordTokens(line) != null) return _LineKind.chordLine;
     return _LineKind.text;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/auth/auth_gateway.dart';
+import '../../../core/chords/chord_detection.dart';
 import '../../../core/db/app_database.dart';
 import '../../../core/demo/demo_songs.dart';
 import '../../../core/utils/slug.dart';
@@ -45,6 +46,7 @@ class SongDraft {
     this.artist = '',
     this.body = '',
     this.originalKey = '',
+    this.chordDetectionMode = ChordDetectionMode.auto,
     this.capo = 0,
     this.tempo,
     this.instrument = 'guitar',
@@ -58,6 +60,7 @@ class SongDraft {
   final String artist;
   final String body;
   final String originalKey;
+  final ChordDetectionMode chordDetectionMode;
   final int capo;
   final int? tempo;
   final String instrument;
@@ -212,6 +215,7 @@ class SongRepository {
       artistSlug: Value(artist.isEmpty ? 'unknown' : slugify(artist)),
       body: Value(draft.body),
       originalKey: Value(draft.originalKey.trim()),
+      chordDetectionMode: Value(draft.chordDetectionMode.storageKey),
       capo: Value(draft.capo.clamp(0, 12)),
       tempo: Value(draft.tempo),
       instrument: Value(draft.instrument),

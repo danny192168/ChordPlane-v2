@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_gateway.dart';
+import '../../core/chords/chord_detection.dart';
 import '../../core/config/app_config.dart';
 import '../../core/settings/settings.dart';
 import '../sharing/cloud/auth_gate_sheet.dart';
@@ -97,16 +98,54 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           const _SectionLabel('Chord input'),
           _Card(
-            child: SwitchListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              value: settings.detectBareChords,
-              onChanged: controller.setDetectBareChords,
-              title: const Text('Detect chords without < >'),
-              subtitle: const Text(
-                'Ultimate-Guitar-style chord lines above lyrics and bare '
-                'chord words are picked up as chords. Turn this off if '
-                'lyrics are misread, and wrap chords in < > instead — '
-                'e.g. <G> or <G D Em C>.',
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Default detection',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  InputDecorator(
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.fromLTRB(12, 10, 8, 10),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<ChordDetectionMode>(
+                        isExpanded: true,
+                        isDense: true,
+                        value: settings.defaultChordDetectionMode,
+                        items: [
+                          for (final mode in ChordDetectionMode.values)
+                            DropdownMenuItem(
+                              value: mode,
+                              child: Text(mode.label),
+                            ),
+                        ],
+                        onChanged: (mode) {
+                          if (mode == null) return;
+                          controller.setDefaultChordDetectionMode(mode);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${settings.defaultChordDetectionMode.description} '
+                    'New songs start with this mode; each song can override '
+                    'it while editing.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

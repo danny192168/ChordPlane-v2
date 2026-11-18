@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/chords/chord_detection.dart';
 import '../../core/chords/chord_document.dart';
 import '../../features/songs/presentation/widgets/chord_sheets.dart';
 import '../../features/songs/presentation/widgets/song_sheet.dart';
@@ -490,7 +491,11 @@ class _SongSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        _SongSheetBlock(body: song.body, offset: offset),
+        _SongSheetBlock(
+          body: song.body,
+          offset: offset,
+          mode: song.chordDetectionMode,
+        ),
       ],
     );
   }
@@ -554,10 +559,15 @@ class _TransposeBar extends StatelessWidget {
 }
 
 class _SongSheetBlock extends StatelessWidget {
-  const _SongSheetBlock({required this.body, required this.offset});
+  const _SongSheetBlock({
+    required this.body,
+    required this.offset,
+    required this.mode,
+  });
 
   final String body;
   final int offset;
+  final ChordDetectionMode mode;
 
   @override
   Widget build(BuildContext context) {
@@ -565,7 +575,7 @@ class _SongSheetBlock extends StatelessWidget {
       body: body,
       originalKey: '',
       transpose: offset.clamp(-11, 11),
-      detectBare: true,
+      mode: mode,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

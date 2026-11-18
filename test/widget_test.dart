@@ -1,3 +1,4 @@
+import 'package:chord_plane/core/chords/chord_detection.dart';
 import 'package:chord_plane/core/chords/chord_document.dart';
 import 'package:chord_plane/core/chords/chord_source.dart';
 import 'package:chord_plane/core/chords/text_diagnostics.dart';
@@ -84,12 +85,15 @@ void main() {
   });
 
   group('chord source formats', () {
-    ChordDocument build(String body, {bool detectBare = false}) {
+    ChordDocument build(
+      String body, {
+      ChordDetectionMode mode = ChordDetectionMode.bracketsOnly,
+    }) {
       return ChordDocument.build(
         body: body,
         originalKey: 'G',
         transpose: 0,
-        detectBare: detectBare,
+        mode: mode,
       );
     }
 
@@ -114,11 +118,11 @@ void main() {
           'Amazing grace, how sweet\n'
           'Em      D\n'
           'that saved a wretch like me';
-      final document = build(body, detectBare: true);
+      final document = build(body, mode: ChordDetectionMode.auto);
       expect(document.chords, ['G', 'C', 'Em', 'D']);
     });
 
-    test('bare chord detection is off by default', () {
+    test('brackets-only mode leaves bare chord rows as text', () {
       const body = 'G          C\nAmazing grace, how sweet';
       final document = build(body);
       expect(document.chords, isEmpty);
@@ -127,22 +131,47 @@ void main() {
     test('detects bare chord words inside lyric lines', () {
       final document = build(
         'I played the G chord and then the Am7',
-        detectBare: true,
+        mode: ChordDetectionMode.auto,
       );
       expect(document.chords, ['G', 'Am7']);
     });
 
     test('does not treat the word A as a bare chord', () {
-      final document = build('I am A man of constant sorrow', detectBare: true);
+      final document = build(
+        'I am A man of constant sorrow',
+        mode: ChordDetectionMode.auto,
+      );
       expect(document.chords, isEmpty);
     });
 
     test('rejects lyric words that merely resemble chords', () {
       final document = build(
         'The Eggs, Bass, Major and Aman passed by',
-        detectBare: true,
+        mode: ChordDetectionMode.auto,
       );
       expect(document.chords, isEmpty);
+    });
+
+    test('ultimate guitar mode keeps bare lyric words as text', () {
+      const body =
+          'G               C\n'
+          'I played the G chord and then the Am7';
+      final document = build(body, mode: ChordDetectionMode.ultimateGuitar);
+      expect(document.chords, ['G', 'C']);
+    });
+
+    test('brackets-only mode ignores bare chord rows and words', () {
+      const body = 'G          C\nI played the G chord';
+      final document = build(body, mode: ChordDetectionMode.bracketsOnly);
+      expect(document.chords, isEmpty);
+    });
+
+    test('chordpro-only mode leaves every other syntax literal', () {
+      final document = build(
+        '<G>Hello [Am]world\nChorus:\n>  C',
+        mode: ChordDetectionMode.chordProOnly,
+      );
+      expect(document.chords, ['Am']);
     });
 
     test('converts Ultimate Guitar section headers', () {
@@ -175,7 +204,7 @@ void main() {
       const body =
           'G      D\n'
           '[C]Amazing [Em]grace';
-      final document = build(body, detectBare: true);
+      final document = build(body, mode: ChordDetectionMode.auto);
       expect(document.chords, ['G', 'C', 'D', 'Em']);
     });
 
@@ -411,7 +440,7 @@ void main() {
       );
     });
 
-    test('recognizes mixed chord rows even when detectBare is off', () {
+    test('recognizes mixed chord rows even when bare detection is off', () {
       const body = '<G> Asus4 ---x\n\nlyrics';
       final document = ChordDocument.build(
         body: body,
@@ -517,6 +546,41 @@ void main() {
           .toList();
       expect(labels, ['Verse 3']);
       expect(ChordSource.normalize(body).split('\n')[1], contains('[Ebm]'));
+    });
+  });
+
+  group('ChordDetectionMode', () {
+    test('round-trips every storage key', () {
+      for (final mode in ChordDetectionMode.values) {
+        expect(ChordDetectionMode.fromStorage(mode.storageKey), mode);
+      }
+    });
+
+    test('accepts enum names and falls back to auto', () {
+      expect(
+        ChordDetectionMode.fromStorage('ultimateGuitar'),
+        ChordDetectionMode.ultimateGuitar,
+      );
+      expect(
+        ChordDetectionMode.fromStorage('chordProOnly'),
+        ChordDetectionMode.chordProOnly,
+      );
+      expect(ChordDetectionMode.fromStorage(null), ChordDetectionMode.auto);
+      expect(ChordDetectionMode.fromStorage(''), ChordDetectionMode.auto);
+      expect(
+        ChordDetectionMode.fromStorage('nonsense'),
+        ChordDetectionMode.auto,
+      );
+    });
+
+    test('exposes the capability flags each mode needs', () {
+      expect(ChordDetectionMode.auto.detectChordRows, isTrue);
+      expect(ChordDetectionMode.auto.detectInlineBare, isTrue);
+      expect(ChordDetectionMode.ultimateGuitar.detectChordRows, isTrue);
+      expect(ChordDetectionMode.ultimateGuitar.detectInlineBare, isFalse);
+      expect(ChordDetectionMode.bracketsOnly.detectChordRows, isFalse);
+      expect(ChordDetectionMode.bracketsOnly.rewritesPlainText, isTrue);
+      expect(ChordDetectionMode.chordProOnly.rewritesPlainText, isFalse);
     });
   });
 

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/chords/chord_detection.dart';
 import '../../../core/chords/chord_document.dart';
 import '../../../core/settings/settings.dart';
 import '../../../core/db/app_database.dart';
@@ -73,7 +74,7 @@ typedef ChordViewKey = ({
   String body,
   String originalKey,
   int transpose,
-  bool detectBare,
+  ChordDetectionMode mode,
 });
 
 final chordDocumentProvider = Provider.family<ChordDocument, ChordViewKey>((
@@ -84,6 +85,6 @@ final chordDocumentProvider = Provider.family<ChordDocument, ChordViewKey>((
     body: key.body,
     originalKey: key.originalKey,
     transpose: key.transpose,
-    detectBare: key.detectBare,
+    mode: key.mode,
   );
 });

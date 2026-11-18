@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../app/theme/app_theme.dart';
+import '../../../core/chords/chord_detection.dart';
 import '../../../core/chords/chord_document.dart';
 import '../../../core/db/app_database.dart';
 import '../../../core/settings/settings.dart';
@@ -135,7 +136,7 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
         body: song.body,
         originalKey: song.originalKey,
         transpose: _transpose,
-        detectBare: settings.detectBareChords,
+        mode: ChordDetectionMode.fromStorage(song.chordDetectionMode),
       )),
     );
     final theme = Theme.of(context);

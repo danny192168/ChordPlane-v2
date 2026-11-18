@@ -1,6 +1,7 @@
 import 'package:chord_pro/chord_pro.dart';
 import 'package:flutter/foundation.dart';
 
+import 'chord_detection.dart';
 import 'chord_source.dart';
 
 /// A parsed, transposed view of a song body. Parsing is cached by normalized
@@ -31,12 +32,12 @@ class ChordDocument {
     required String originalKey,
     required int transpose,
     AccidentalPreference accidentals = AccidentalPreference.sharps,
-    bool detectBare = false,
+    ChordDetectionMode mode = ChordDetectionMode.auto,
   }) {
     final source = body.trim().isEmpty ? '' : body;
     // Plain chord formats (angle brackets, chord-only lines, UG headers)
     // are rewritten once; the parser only ever sees ChordPro brackets.
-    final normalized = ChordSource.normalize(source, detectBare: detectBare);
+    final normalized = ChordSource.normalize(source, mode: mode);
     var base = _parseCache[normalized];
     if (base == null) {
       final result = ChordPro.parse(normalized);
