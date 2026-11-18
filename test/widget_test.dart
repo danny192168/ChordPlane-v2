@@ -626,6 +626,43 @@ void main() {
       expect(normalized.contains('[G]'), isTrue);
     });
 
+    test('CRLF and lone CR line endings are normalized', () {
+      expect(TextDiagnostics.sanitize('a\r\nb\rc'), 'a\nb\nc');
+      expect(
+        ChordSource.normalize('>  C  ---x  G\r\n lyric line here'),
+        ' ly[C]ric line [G]here',
+      );
+    });
+
+    test('CRLF pasted chord rows are detected', () {
+      // In Ultimate Guitar mode inline bare-word detection is off, so a
+      // trailing CR on the last chord would previously drop the whole row.
+      const body = 'G          C\r\nAmazing grace, how sweet';
+      final document = ChordDocument.build(
+        body: body,
+        originalKey: 'G',
+        transpose: 0,
+        mode: ChordDetectionMode.ultimateGuitar,
+      );
+      expect(document.chords, ['G', 'C']);
+
+      const marked = '>  C  ---x  G\r\n lyric line here';
+      final markedDocument = ChordDocument.build(
+        body: marked,
+        originalKey: 'C',
+        transpose: 0,
+      );
+      expect(markedDocument.chords, ['C', 'G']);
+
+      const classicMac = '>  C  ---x  G\r lyric line here';
+      final crDocument = ChordDocument.build(
+        body: classicMac,
+        originalKey: 'C',
+        transpose: 0,
+      );
+      expect(crDocument.chords, ['C', 'G']);
+    });
+
     test('sanitize never alters visible text', () {
       expect(
         TextDiagnostics.sanitize('Am\u00A0G\u200B\u200D7---\uFEFF'),

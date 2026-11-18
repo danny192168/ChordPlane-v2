@@ -60,12 +60,20 @@ abstract final class TextDiagnostics {
   /// Returns [body] with every suspicious character replaced by its plain
   /// equivalent: Unicode spaces become regular spaces, fullwidth angle
   /// brackets become ASCII ones, line/paragraph separators become
-  /// newlines, and zero-width characters are dropped. Safe to run on any
-  /// text — it never alters visible characters.
+  /// newlines, zero-width characters are dropped, and CRLF / lone CR line
+  /// endings become plain newlines. Safe to run on any text — it never
+  /// alters visible characters.
   static String sanitize(String body) {
+    final runes = body.runes.toList(growable: false);
     final buffer = StringBuffer();
-    for (final ch in body.runes) {
-      if (ch == 0x2028 || ch == 0x2029) {
+    for (var i = 0; i < runes.length; i++) {
+      final ch = runes[i];
+      if (ch == 0x0D) {
+        // Windows CRLF becomes a single newline; lone CR (classic Mac
+        // line endings, some PDFs and chat apps) does too.
+        if (i + 1 < runes.length && runes[i + 1] == 0x0A) continue;
+        buffer.write('\n');
+      } else if (ch == 0x2028 || ch == 0x2029) {
         buffer.write('\n');
       } else if (ch == 0xFF1C) {
         buffer.write('<');

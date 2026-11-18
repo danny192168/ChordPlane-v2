@@ -80,11 +80,13 @@ class ChordSource {
   static bool _isHoldDashes(String token) =>
       RegExp(r'^-+[xX]?$').hasMatch(token);
 
-  /// Space, tab, pipe (bar separator) and the Unicode spaces that copies
-  /// from web pages and documents sneak in (non-breaking space et al.).
+  /// Space, tab, carriage return, pipe (bar separator) and the Unicode
+  /// spaces that copies from web pages and documents sneak in
+  /// (non-breaking space et al.).
   static bool _isChordSpace(int ch) {
     return ch == 0x20 ||
         ch == 0x09 ||
+        ch == 0x0D ||
         ch == 0x7C ||
         ch == 0xA0 ||
         ch == 0x1680 ||
