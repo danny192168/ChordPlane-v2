@@ -121,10 +121,7 @@ void main() {
 
   group('routeForIncomingLink', () {
     test('normalises custom-scheme and https links', () {
-      expect(
-        routeForIncomingLink('chordplane://c/abc123'),
-        '/c/abc123',
-      );
+      expect(routeForIncomingLink('chordplane://c/abc123'), '/c/abc123');
       expect(
         routeForIncomingLink('https://chordplane.app/c/abc123'),
         '/c/abc123',
@@ -139,6 +136,35 @@ void main() {
 
     test('falls back to the library for empty input', () {
       expect(routeForIncomingLink('  '), '/');
+    });
+
+    test('routes auth callbacks and recovery links', () {
+      expect(routeForIncomingLink('chordplane://auth-callback?code=abc'), '/');
+      expect(
+        routeForIncomingLink('chordplane://reset-password?code=abc'),
+        '/set-new-password',
+      );
+      expect(
+        routeForIncomingLink(
+          'https://chordplane.citcs.site/auth/confirm?code=abc',
+        ),
+        '/',
+      );
+    });
+
+    test('identifies auth links without mistaking share links', () {
+      expect(isAuthDeepLink('chordplane://auth-callback?code=abc'), isTrue);
+      expect(
+        isAuthDeepLink('chordplane://reset-password#access_token=abc'),
+        isTrue,
+      );
+      expect(
+        isAuthDeepLink('https://chordplane.citcs.site/auth/confirm?code=abc'),
+        isTrue,
+      );
+      expect(isAuthDeepLink('chordplane://c/abc123'), isFalse);
+      expect(isAuthDeepLink('chordplane://s/token123'), isFalse);
+      expect(isAuthDeepLink('/song/42'), isFalse);
     });
   });
 

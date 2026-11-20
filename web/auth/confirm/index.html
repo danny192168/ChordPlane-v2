@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Confirm your ChordPlane email</title>
+  <meta name="theme-color" content="#16283B">
+  <link rel="icon" type="image/png" href="/download/favicon.png">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f5f1;
+      --card: #ffffff;
+      --text: #16283b;
+      --muted: #5b6a7a;
+      --accent: #1f6f5c;
+      --border: rgba(22, 40, 59, 0.14);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101c28;
+        --card: #16283b;
+        --text: #eef3f7;
+        --muted: #a8b6c4;
+        --accent: #7fd6bb;
+        --border: rgba(255, 255, 255, 0.14);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Helvetica, Arial, sans-serif;
+    }
+    main {
+      width: 100%;
+      max-width: 460px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .mark {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 16px;
+      border-radius: 14px;
+      background: #16283b;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 24px;
+    }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+    .button {
+      display: inline-block;
+      width: 100%;
+      padding: 13px 18px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .hint { margin-top: 14px; font-size: 13px; }
+    code {
+      font-size: 12px;
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: var(--border);
+    }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true">C</div>
+    <div id="status">
+      <h1>Opening ChordPlane…</h1>
+      <p>If the app does not open automatically, tap the button below.</p>
+    </div>
+    <div id="error" hidden>
+      <h1>That link did not work</h1>
+      <p id="error-message">The confirmation link may have expired or already
+        been used. Request a new one from the sign-in screen.</p>
+    </div>
+    <a id="open-app" class="button" href="chordplane://auth-callback">
+      Open ChordPlane
+    </a>
+    <p class="hint">
+      Reading email on a computer? Open this link on the phone where
+      ChordPlane is installed so confirmation can finish in the app.
+    </p>
+  </main>
+
+  <script>
+    (function () {
+      const status = document.getElementById('status');
+      const error = document.getElementById('error');
+      const errorMessage = document.getElementById('error-message');
+      const openApp = document.getElementById('open-app');
+
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+      const keys = [
+        'code', 'type', 'error', 'error_code', 'error_description',
+        'access_token', 'refresh_token', 'token_type', 'expires_in',
+        'provider_token', 'provider_refresh_token'
+      ];
+
+      const target = new URL('chordplane://auth-callback');
+      let hasPayload = false;
+      for (const key of keys) {
+        const value = query.get(key) || hash.get(key);
+        if (value) {
+          target.searchParams.set(key, value);
+          hasPayload = true;
+        }
+      }
+
+      const description =
+        query.get('error_description') || hash.get('error_description');
+      const errorCode = query.get('error') || hash.get('error');
+      if (description || errorCode) {
+        status.hidden = true;
+        error.hidden = false;
+        if (description) errorMessage.textContent = description;
+        return;
+      }
+
+      if (!hasPayload) {
+        status.hidden = true;
+        error.hidden = false;
+        errorMessage.textContent =
+          'This page expects the confirmation link from your email. ' +
+          'Open the link from your inbox, or request a new one in the app.';
+        return;
+      }
+
+      openApp.href = target.toString();
+
+      // Give the fallback a frame to paint before handing off to the app.
+      requestAnimationFrame(function () {
+        window.location.replace(target.toString());
+      });
+    })();
+  </script>
+</body>
+</html>

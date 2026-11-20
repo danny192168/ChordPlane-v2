@@ -60,8 +60,115 @@ flutter run \
   --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
-Auth: email + password sign-in is enabled by default; magic-link and social
-providers can be added in the Supabase dashboard later.
+Auth: email + password sign-in is enabled by default. Native Google Sign-In is
+also supported, but stays hidden until a Google client ID is compiled in (see
+[Accounts and Google sign-in](#accounts-and-google-sign-in)).
+
+## Accounts and Google sign-in
+
+Sign-in is only needed to create cloud share links; the library works without
+an account. The app supports:
+
+- **Email + password** — sign up, confirmation email, resend confirmation.
+- **Google** — the native Android/iOS account picker, exchanged for a Supabase
+  session with `signInWithIdToken`.
+- **Password reset** — a `chordplane://reset-password` link opens the
+  “choose a new password” screen.
+
+On the web viewer the Google button is hidden; email sign-in is native-app only.
+
+### Google Cloud Console
+
+1. Configure the OAuth consent screen (External), then create three OAuth
+   clients under **Credentials**:
+
+   | Type | Configuration |
+   | --- | --- |
+   | Web application | Authorized redirect URI: `https://eweppodjncodtsiljvak.supabase.co/auth/v1/callback` |
+   | Android | Package name `app.chordplane.chord_plane` plus the signing SHA-1s below |
+   | iOS | Bundle ID `app.chordplane.chordPlane` |
+
+2. Android SHA-1 fingerprints for this repository:
+
+   ```text
+   release: 65:6E:6B:B7:8D:E6:30:AC:79:E5:1A:36:E3:BB:E4:D5:08:60:3E:C6
+   debug:   64:ED:11:A7:B7:73:FB:3E:8B:9D:B3:A6:DB:56:8F:C0:77:B6:A4:AD
+   ```
+
+   Regenerate them after replacing the keystore:
+
+   ```sh
+   keytool -list -v -keystore keys/chordplane-release.keystore | grep SHA1
+   keytool -list -v -keystore ~/.android/debug.keystore -storepass android | grep SHA1
+   ```
+
+   A build distributed through Google Play is re-signed by Play, so its App
+   Signing SHA-1 must be added as a second Android OAuth client too.
+
+3. The **Web** client ID and secret go into Supabase. The **iOS** client ID is
+   public and is used directly by the app. No `google-services.json` is needed.
+
+### Supabase Dashboard
+
+1. **Authentication → Providers → Google**: enable it and paste the Web client
+   ID and secret.
+2. Add the **Android** and **iOS** client IDs to **Authorized Client IDs**.
+   Supabase verifies the ID token audience, which is the Web client on Android
+   and the iOS client on iOS.
+3. **Authentication → URL Configuration**:
+   - Site URL: `https://chordplane.citcs.site`
+   - Redirect URLs: `chordplane://**` and
+     `https://chordplane.citcs.site/auth/confirm`
+4. For production sign-ups configure **custom SMTP**; the built-in email sender
+   is rate-limited and not meant for real users.
+
+`web/auth/confirm/index.html` is the static landing page for confirmation
+links. It forwards the `code` (or implicit-flow tokens) to
+`chordplane://auth-callback` and shows an “Open ChordPlane” fallback when the
+email is opened on a desktop.
+
+### Building with Google
+
+Pass the public client IDs at build time. The Android release workflow reads
+them from the repository variables `GOOGLE_WEB_CLIENT_ID` and
+`GOOGLE_IOS_CLIENT_ID`:
+
+```sh
+flutter run \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY \
+  --dart-define=GOOGLE_WEB_CLIENT_ID=WEB_ID.apps.googleusercontent.com \
+  --dart-define=GOOGLE_IOS_CLIENT_ID=IOS_ID.apps.googleusercontent.com
+```
+
+Without `GOOGLE_WEB_CLIENT_ID` the Google button is hidden and email sign-in
+continues to work.
+
+For iOS, add the iOS client ID and its reversed form to `ios/Runner/Info.plist`
+(the scheme is what brings the account picker back to the app):
+
+```xml
+<key>GIDClientID</key>
+<string>IOS_ID.apps.googleusercontent.com</string>
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.googleusercontent.apps.IOS_ID</string>
+    </array>
+  </dict>
+</array>
+```
+
+Keep the existing `chordplane` URL scheme entry alongside this one.
+
+### Before the App Store
+
+Apps that offer Google sign-in must also offer **Sign in with Apple** under
+App Store guideline 4.8. That provider is intentionally not part of this
+change: it needs an Apple Developer Services ID/key, the Supabase Apple
+provider, and an `Xcode` capability. Add it before submitting the iOS build.
 
 ## Running
 
@@ -69,7 +176,7 @@ providers can be added in the Supabase dashboard later.
 flutter pub get
 dart run build_runner build        # regenerate Drift code after schema edits
 flutter run                        # pick a device or emulator
-flutter test                       # 27 unit + widget tests
+flutter test                       # unit + widget tests
 flutter analyze
 ```
 

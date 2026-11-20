@@ -1,10 +1,11 @@
 import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_gateway.dart';
+import '../../core/auth/google_auth.dart';
 import '../../core/chords/chord_detection.dart';
 import '../../core/config/app_config.dart';
 import '../../core/settings/settings.dart';
@@ -197,7 +198,8 @@ class SettingsScreen extends ConsumerWidget {
           _Card(
             child: Column(
               children: [
-                if (AppConfig.hasSupabase && AppConfig.supabaseInitError == null)
+                if (AppConfig.hasSupabase &&
+                    AppConfig.supabaseInitError == null)
                   ListTile(
                     leading: const Icon(Icons.link),
                     title: const Text('My shared links'),
@@ -308,7 +310,16 @@ class _AccountTile extends ConsumerWidget {
       title: Text('Signed in as $email'),
       subtitle: const Text('Cloud share links enabled'),
       trailing: TextButton(
-        onPressed: () => ref.read(signInApiProvider).signOut(),
+        onPressed: () async {
+          try {
+            await ref.read(signInApiProvider).signOut();
+          } catch (error) {
+            debugPrint('Sign-out failed: $error');
+          }
+          // Clear the Google account too so the next tap shows the picker
+          // instead of silently reusing the previous identity.
+          await ref.read(googleAuthProvider).signOut();
+        },
         child: const Text('Sign out'),
       ),
     );

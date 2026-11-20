@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/auth/auth_gateway.dart';
 import '../core/settings/settings.dart';
@@ -38,6 +39,16 @@ class _ChordPlaneAppState extends ConsumerState<ChordPlaneApp> {
       if (previous?.value == false && next.value == true) {
         ref.read(shareOutboxProvider).flush();
       }
+    });
+
+    // A password-reset link signs the member in without asking for a
+    // password; send them straight to the screen that sets one.
+    ref.listen(authEventProvider, (previous, next) {
+      if (next.value != AuthChangeEvent.passwordRecovery) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(routerProvider).go('/set-new-password');
+      });
     });
 
     return MaterialApp.router(

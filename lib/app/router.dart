@@ -9,6 +9,7 @@ import '../features/setlists/setlist_detail_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/sharing/cpl.dart';
 import '../features/sharing/cloud/my_shares_screen.dart';
+import '../features/sharing/cloud/password_reset.dart';
 import '../features/sharing/import_screen.dart';
 import '../features/songs/presentation/artist_screen.dart';
 import '../features/songs/presentation/song_editor_screen.dart';
@@ -33,9 +34,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Flutter passes the raw link (for example `chordplane://c/<code>`) as the
     // platform default location. We normalise it ourselves in [main] instead.
     overridePlatformDefaultLocation: true,
-    errorBuilder: (context, state) => _DeepLinkRecovery(
-      location: state.uri.toString(),
-    ),
+    errorBuilder: (context, state) =>
+        _DeepLinkRecovery(location: state.uri.toString()),
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -68,9 +68,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: '/setlist/:id',
-                builder: (context, state) => SetlistDetailScreen(
-                  setlistId: state.pathParameters['id']!,
-                ),
+                builder: (context, state) =>
+                    SetlistDetailScreen(setlistId: state.pathParameters['id']!),
               ),
             ],
           ),
@@ -121,6 +120,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/reset-password',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/set-new-password',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SetNewPasswordScreen(),
+      ),
+      GoRoute(
         path: '/c/:code',
         parentNavigatorKey: rootNavigatorKey,
         redirect: (context, state) =>
@@ -158,10 +167,12 @@ class _DeepLinkRecovery extends StatefulWidget {
 
 class _DeepLinkRecoveryState extends State<_DeepLinkRecovery> {
   /// Both server-backed links (`…/s/<token>`) and legacy inline codes
-  /// (`…/c/<code>`) are recoverable; anything else is genuinely not found.
+  /// (`…/c/<code>`) are recoverable, as are Supabase auth redirects;
+  /// anything else is genuinely not found.
   late final bool _isDeepLink =
       CplFormat.extractServerToken(widget.location) != null ||
-      CplBundle.extractShareCode(widget.location) != null;
+      CplBundle.extractShareCode(widget.location) != null ||
+      isAuthDeepLink(widget.location);
 
   @override
   void initState() {
@@ -176,9 +187,7 @@ class _DeepLinkRecoveryState extends State<_DeepLinkRecovery> {
   @override
   Widget build(BuildContext context) {
     if (_isDeepLink) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
       appBar: AppBar(title: const Text('Not found')),

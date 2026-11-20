@@ -19,6 +19,9 @@ abstract interface class AuthGateway {
 
   /// Emits on every sign-in / sign-out so auth-gated UI rebuilds.
   Stream<bool> get signedInChanges;
+
+  /// Raw Supabase auth events, used to detect password-recovery links.
+  Stream<AuthChangeEvent> get authEvents;
 }
 
 class GuestAuthGateway implements AuthGateway {
@@ -40,6 +43,10 @@ class GuestAuthGateway implements AuthGateway {
 
   @override
   Stream<bool> get signedInChanges => Stream<bool>.value(false);
+
+  @override
+  Stream<AuthChangeEvent> get authEvents =>
+      const Stream<AuthChangeEvent>.empty();
 }
 
 class SupabaseAuthGateway implements AuthGateway {
@@ -63,6 +70,10 @@ class SupabaseAuthGateway implements AuthGateway {
   @override
   Stream<bool> get signedInChanges =>
       _auth.onAuthStateChange.map((event) => event.session?.user != null);
+
+  @override
+  Stream<AuthChangeEvent> get authEvents =>
+      _auth.onAuthStateChange.map((event) => event.event);
 }
 
 final authGatewayProvider = Provider<AuthGateway>((ref) {
@@ -79,4 +90,9 @@ final currentUserIdProvider = Provider<String>(
 /// Rebuilds consumers whenever the sign-in state flips.
 final signedInProvider = StreamProvider<bool>(
   (ref) => ref.watch(authGatewayProvider).signedInChanges,
+);
+
+/// Raw auth events. The app root watches this for password-recovery links.
+final authEventProvider = StreamProvider<AuthChangeEvent>(
+  (ref) => ref.watch(authGatewayProvider).authEvents,
 );

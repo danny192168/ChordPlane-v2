@@ -88,14 +88,19 @@ jobs:
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
         run: |
           # Without these the app still works, but cloud share links are
           # compiled out. The fallbacks match lib/web_viewer/web_config.dart.
+          # Google sign-in stays hidden when GOOGLE_WEB_CLIENT_ID is empty.
           flutter build apk --release \
             --build-name="${{ steps.version.outputs.name }}" \
             --build-number="${{ github.run_number }}" \
             --dart-define=SUPABASE_URL="${SUPABASE_URL:-https://eweppodjncodtsiljvak.supabase.co}" \
-            --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-sb_publishable_ikLjo_Uua2EXV5p2rffR2Q_-oOSvF34}"
+            --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-sb_publishable_ikLjo_Uua2EXV5p2rffR2Q_-oOSvF34}" \
+            --dart-define=GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}" \
+            --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}"
 
       - name: Package release assets
         run: |

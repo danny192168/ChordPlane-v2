@@ -10,6 +10,7 @@ import 'package:chord_plane/features/songs/data/song_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Covers the server-share service behaviours that back the "My shared
 /// links" screen: token ↔ local-content mapping, re-pushing updates, and
@@ -154,6 +155,10 @@ class _SignedInAuthGateway implements AuthGateway {
 
   @override
   Stream<bool> get signedInChanges => const Stream<bool>.empty();
+
+  @override
+  Stream<AuthChangeEvent> get authEvents =>
+      const Stream<AuthChangeEvent>.empty();
 }
 
 class _FakeShareApi implements ShareCloudApi {

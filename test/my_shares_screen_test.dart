@@ -4,10 +4,12 @@ import 'package:chord_plane/features/sharing/cloud/my_shares_screen.dart';
 import 'package:chord_plane/features/sharing/cloud/server_share_service.dart';
 import 'package:chord_plane/features/sharing/cloud/share_cloud.dart';
 import 'package:chord_plane/features/songs/data/song_repository.dart';
-import 'package:drift/native.dart';import 'package:flutter/material.dart';
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Exercises the "My shared links" screen against a faked API and an
 /// in-memory database: states it renders and the actions it offers.
@@ -89,8 +91,9 @@ void main() {
     expect(find.byType(PopupMenuButton<String>), findsNWidgets(2));
   });
 
-  testWidgets('revoking a link calls the API and shows a confirmation',
-      (tester) async {
+  testWidgets('revoking a link calls the API and shows a confirmation', (
+    tester,
+  ) async {
     api.seeded = [record()];
     await tester.pumpWidget(app(shares: api.seeded));
     await tester.pumpAndSettle();
@@ -142,6 +145,10 @@ class _SignedInAuthGateway implements AuthGateway {
 
   @override
   Stream<bool> get signedInChanges => Stream<bool>.value(true);
+
+  @override
+  Stream<AuthChangeEvent> get authEvents =>
+      const Stream<AuthChangeEvent>.empty();
 }
 
 class _FakeShareApi implements ShareCloudApi {
