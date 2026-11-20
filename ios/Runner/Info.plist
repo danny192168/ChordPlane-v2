@@ -36,7 +36,19 @@
 				<string>chordplane</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.googleusercontent.apps.48932333984-g3subc39pkjq2sr8k4fdro91d5ajkh91</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.48932333984-g3subc39pkjq2sr8k4fdro91d5ajkh91</string>
+			</array>
+		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>48932333984-g3subc39pkjq2sr8k4fdro91d5ajkh91.apps.googleusercontent.com</string>
 	<key>FlutterDeepLinkingEnabled</key>
 	<true/>
 	<key>LSRequiresIPhoneOS</key>

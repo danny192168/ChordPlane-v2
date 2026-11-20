@@ -79,14 +79,22 @@ On the web viewer the Google button is hidden; email sign-in is native-app only.
 
 ### Google Cloud Console
 
-1. Configure the OAuth consent screen (External), then create three OAuth
-   clients under **Credentials**:
+1. Open [Google Auth Platform → Clients](https://console.cloud.google.com/auth/clients).
+   If the project has never had a consent screen, fill in **Branding**
+   (`/auth/branding`) and **Audience** (`/auth/audience`, External) first, and
+   request only `openid`, `.../auth/userinfo.email` and
+   `.../auth/userinfo.profile` under **Data Access**. Then create four clients:
 
    | Type | Configuration |
    | --- | --- |
    | Web application | Authorized redirect URI: `https://eweppodjncodtsiljvak.supabase.co/auth/v1/callback` |
-   | Android | Package name `app.chordplane.chord_plane` plus the signing SHA-1s below |
+   | Android | Package name `app.chordplane.chord_plane` plus the release SHA-1 below |
+   | Android | Same package name plus the debug SHA-1 below |
    | iOS | Bundle ID `app.chordplane.chordPlane` |
+
+   An OAuth client holds a single SHA-1, so release and debug builds need
+   separate Android clients. Only the Web client has a secret; the Android and
+   iOS clients are identified by ID alone.
 
 2. Android SHA-1 fingerprints for this repository:
 
@@ -112,15 +120,19 @@ On the web viewer the Google button is hidden; email sign-in is native-app only.
 
 1. **Authentication → Providers → Google**: enable it and paste the Web client
    ID and secret.
-2. Add the **Android** and **iOS** client IDs to **Authorized Client IDs**.
-   Supabase verifies the ID token audience, which is the Web client on Android
-   and the iOS client on iOS.
-3. **Authentication → URL Configuration**:
+2. Add the **Android** and **iOS** client IDs to **Authorized Client IDs**,
+   comma-separated with the Web client first. Supabase verifies the ID token
+   audience, which is the Web client on Android and the iOS client on iOS.
+3. Turn on **Skip nonce check** in the same panel. The native flow exchanges an
+   ID token without a nonce, and iOS sign-in fails without this even when every
+   client ID is correct.
+4. **Authentication → URL Configuration**:
    - Site URL: `https://chordplane.citcs.site`
    - Redirect URLs: `chordplane://**` and
      `https://chordplane.citcs.site/auth/confirm`
-4. For production sign-ups configure **custom SMTP**; the built-in email sender
-   is rate-limited and not meant for real users.
+5. For production sign-ups configure **custom SMTP**; the built-in email sender
+   is rate-limited, only delivers to project team members, and is not meant for
+   real users.
 
 `web/auth/confirm/index.html` is the static landing page for confirmation
 links. It forwards the `code` (or implicit-flow tokens) to
@@ -144,8 +156,9 @@ flutter run \
 Without `GOOGLE_WEB_CLIENT_ID` the Google button is hidden and email sign-in
 continues to work.
 
-For iOS, add the iOS client ID and its reversed form to `ios/Runner/Info.plist`
-(the scheme is what brings the account picker back to the app):
+For iOS, `ios/Runner/Info.plist` carries the client ID twice — as `GIDClientID`
+and as the reversed-client-ID URL scheme that brings the account picker back
+into the app:
 
 ```xml
 <key>GIDClientID</key>
@@ -161,7 +174,10 @@ For iOS, add the iOS client ID and its reversed form to `ios/Runner/Info.plist`
 </array>
 ```
 
-Keep the existing `chordplane` URL scheme entry alongside this one.
+Keep the existing `chordplane` URL scheme entry alongside this one. If the iOS
+client is ever recreated, change both occurrences in the plist and the
+`GOOGLE_IOS_CLIENT_ID` variable together — a stale one produces a token whose
+audience Supabase will not accept.
 
 ### Before the App Store
 
