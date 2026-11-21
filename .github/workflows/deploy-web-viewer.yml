@@ -3,7 +3,7 @@ name: Deploy web viewer
 # Builds two things and publishes them together:
 #   site/   → the Astro marketing site, served at /
 #   viewer  → the Flutter share viewer, served from /viewer/ and reached
-#             through the /s/* rewrite in Chordplane-Web's vercel.json.
+#             through the /s/* rewrite in site/public/vercel.json.
 # The combined output is pushed to Chordplane-Web, which Vercel deploys.
 on:
   push:
@@ -66,6 +66,7 @@ jobs:
           test -f staging/viewer/index.html
           test -f staging/auth/confirm/index.html
           test -f staging/404.html
+          test -f staging/vercel.json
 
       - name: Push to Chordplane-Web
         env:

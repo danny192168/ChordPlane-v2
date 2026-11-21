@@ -225,9 +225,9 @@ flutter build web --release --target lib/web_viewer/main.dart \
   --output build/viewer --base-href=/viewer/
 ```
 
-The `/s/*` rewrite lives in `Chordplane-Web/vercel.json` and is preserved by
-the deploy on purpose. Without it, a share link lands on the marketing page
-instead of the viewer.
+The `/s/*` rewrite lives in `site/public/vercel.json`, so it is versioned here
+and copied into the deploy root with the rest of the site. Without it, a share
+link lands on the marketing page instead of the viewer.
 
 ## Android releases and the download page
 
