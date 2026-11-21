@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Shared sheets are public to anyone with the link, but they are not meant to
+# show up in search results.
+Disallow: /s/
+Disallow: /auth/
+Disallow: /viewer/
+
+Sitemap: https://chordplane.citcs.site/sitemap.xml

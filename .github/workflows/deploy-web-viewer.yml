@@ -3,7 +3,7 @@ name: Deploy web viewer
 # Builds two things and publishes them together:
 #   site/   → the Astro marketing site, served at /
 #   viewer  → the Flutter share viewer, served from /viewer/ and reached
-#             through the /s/* rewrite in site/public/vercel.json.
+#             through the /s/* rewrite in deploy/vercel.json.
 # The combined output is pushed to Chordplane-Web, which Vercel deploys.
 on:
   push:
@@ -60,6 +60,9 @@ jobs:
           cp -r site/dist/. staging/
           mkdir -p staging/viewer
           cp -r build/viewer/. staging/viewer/
+          # The share-link rewrite is versioned here and copied over the copy
+          # that Chordplane-Web keeps, so the two can never drift.
+          cp deploy/vercel.json staging/vercel.json
 
           # Fail loudly rather than deploying a half-built site.
           test -f staging/index.html
