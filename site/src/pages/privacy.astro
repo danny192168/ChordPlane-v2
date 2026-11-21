@@ -1,0 +1,109 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Privacy — ChordPlane"
+  description="What ChordPlane stores on your device, what a share link puts in the cloud, and what is never collected at all."
+>
+  <section class="wrap page-head">
+    <span class="eyebrow">Privacy</span>
+    <h1>What ChordPlane does with your data</h1>
+    <p>
+      Short version: your library never leaves the device. The only thing that
+      goes to a server is a sheet you explicitly share.
+    </p>
+    <p class="updated">Last updated 21 November 2026</p>
+  </section>
+
+  <div class="wrap prose">
+    <h2>On your device</h2>
+    <p>
+      Songs, set lists, transpose settings and preferences are stored in a local
+      database inside the app. They are not uploaded, synced or backed up by
+      ChordPlane. If you uninstall the app, Android removes that data with it.
+    </p>
+
+    <h2>If you create an account</h2>
+    <p>
+      An account is optional and only needed to create share links you can
+      manage later. You can sign up with an email address and password, or with
+      Google.
+    </p>
+    <ul>
+      <li>
+        <strong>Email and password:</strong> the address is stored by our
+        authentication provider (Supabase). Passwords are hashed, never stored
+        in readable form.
+      </li>
+      <li>
+        <strong>Google sign-in:</strong> Google tells us your email address,
+        display name and profile picture URL. Nothing else is requested, and we
+        do not receive access to Gmail, Drive or any other Google service.
+      </li>
+    </ul>
+
+    <h2>What a share link stores</h2>
+    <p>
+      Sharing is the one action that sends content to a server. When you share a
+      song or a set list, ChordPlane stores:
+    </p>
+    <ul>
+      <li>the sheet or set list you chose to share, as a fixed snapshot;</li>
+      <li>your account's email address, so the share can be listed and removed;</li>
+      <li>when it was created, and a random token that forms the link.</li>
+    </ul>
+    <p>
+      <strong>A share link is public to anyone who has the URL.</strong> Treat it
+      like posting the sheet: don't share material you don't have the right to
+      distribute. Removing the share from the app deletes the stored snapshot,
+      and the link stops working immediately.
+    </p>
+
+    <h2>Cookies and local storage</h2>
+    <p>
+      The app stores your sign-in session on the device so you stay logged in
+      between launches. This website is static: it sets no advertising cookies
+      and runs no analytics.
+    </p>
+
+    <h2>What is never collected</h2>
+    <ul>
+      <li>No analytics or usage tracking of any kind.</li>
+      <li>No crash reporting or device identifiers.</li>
+      <li>No advertising SDKs, and no data sold or shared with advertisers.</li>
+      <li>No location, contacts, camera or microphone access.</li>
+    </ul>
+
+    <h2>Removing your data</h2>
+    <p>
+      Songs and set lists: delete them in the app, or uninstall it. Shares:
+      remove them from <strong>My shares</strong> in the app. To delete your
+      account entirely, including any shares still attached to it,
+      <a href="https://github.com/danny192168/ChordPlane-v2/issues" rel="noopener"
+        >open an issue</a
+      >
+      and it will be removed.
+    </p>
+
+    <h2>Children</h2>
+    <p>
+      ChordPlane is not directed at children under 13, and accounts are not
+      knowingly created for them.
+    </p>
+
+    <h2>Changes</h2>
+    <p>
+      If this note changes in a way that affects what is stored, the date at the
+      top changes with it.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions about any of the above:
+      <a href="https://github.com/danny192168/ChordPlane-v2/issues" rel="noopener"
+        >open an issue on GitHub</a
+      >.
+    </p>
+  </div>
+</Base>

@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Build output (CI builds this into the deploy root)
+dist/
+
+# Astro generated files
+.astro/
+
+# Logs and local env
+*.log
+.env
+.env.*
+!.env.example

@@ -42,6 +42,11 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Astro site
+site/node_modules/
+site/dist/
+site/.astro/
+
 # Symbolication related
 app.*.symbols
 

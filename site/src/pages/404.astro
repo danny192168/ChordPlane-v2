@@ -1,0 +1,24 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Page not found — ChordPlane"
+  description="That page does not exist."
+  noindex={true}
+>
+  <section class="wrap not-found">
+    <div>
+      <span class="eyebrow">404</span>
+      <h1>Nothing here</h1>
+      <p>
+        The link may be mistyped, or a shared sheet may have been removed. Those
+        links look like <code>chordplane.citcs.site/s/&lt;token&gt;</code>.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/download/">Download ChordPlane</a>
+        <a class="btn btn-quiet" href="/">Back to the start</a>
+      </div>
+    </div>
+  </section>
+</Base>

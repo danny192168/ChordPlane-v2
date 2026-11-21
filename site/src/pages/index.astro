@@ -1,0 +1,175 @@
+---
+import Base from '../layouts/Base.astro';
+import Sheet from '../components/Sheet.astro';
+import ReleaseInfo from '../components/ReleaseInfo.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'ChordPlane',
+  applicationCategory: 'MultimediaApplication',
+  operatingSystem: 'Android 7.0+',
+  url: 'https://chordplane.citcs.site/download/',
+  downloadUrl:
+    'https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk',
+  description:
+    'A guitar-first chord and lyric songbook. Chords sit above the lyrics, songs transpose into any key, and everything stays on your device.',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+};
+---
+
+<Base
+  title="ChordPlane — a guitar-first chord and lyric songbook"
+  description="Chords above lyrics, transpose in any key, chord diagrams and set lists. Songs stay on your device; the cloud only appears when you share a link."
+  jsonLd={jsonLd}
+>
+  <section class="wrap hero">
+    <div>
+      <span class="eyebrow">Android · free · offline first</span>
+      <h1>Your set list, ready before the first chord.</h1>
+      <p class="lede">
+        ChordPlane keeps chords above lyrics, transposes any song into the key
+        you need, and shows the voicings as you play. Your songs live on your
+        phone — the cloud only appears when you choose to share.
+      </p>
+
+      <div class="actions">
+        <a
+          id="download-apk"
+          class="btn btn-primary"
+          href="https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk"
+          rel="noopener"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+            <path
+              d="M12 3v11m0 0 4.5-4.5M12 14 7.5 9.5M5 17.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+          Download for Android
+        </a>
+        <a class="btn btn-quiet" href="#inside">What's inside</a>
+      </div>
+
+      <ReleaseInfo />
+    </div>
+
+    <div class="hero-sheet">
+      <Sheet />
+    </div>
+  </section>
+
+  <section class="section wrap" id="inside" aria-labelledby="inside-title">
+    <div class="section-head">
+      <span class="eyebrow">Built for playing</span>
+      <h2 id="inside-title">Everything a sheet needs, nothing it doesn't.</h2>
+      <p>
+        The tools sit out of the way until you reach for them, and the sheet
+        itself stays readable at arm's length under stage lights.
+      </p>
+    </div>
+
+    <ul class="points">
+      <li>
+        <h3>Chords above lyrics</h3>
+        <p>
+          Write ChordPro, paste a sheet in from the web, or use the chord
+          toolbar. Bracket and plain formats are both detected.
+        </p>
+      </li>
+      <li>
+        <h3>Transpose anything</h3>
+        <p>
+          Shift from −11 to +11 semitones without the key turning unreadable.
+          Zoom the text, then let the sheet scroll itself.
+        </p>
+      </li>
+      <li>
+        <h3>Chord diagrams</h3>
+        <p>
+          Tap a chord for guitar or ukulele voicings, or open every chord in the
+          song at once.
+        </p>
+      </li>
+      <li>
+        <h3>Set lists</h3>
+        <p>
+          Group songs, drag them into running order, and copy the list when
+          someone asks what you played.
+        </p>
+      </li>
+      <li>
+        <h3>Share with a link</h3>
+        <p>
+          Send a song or a whole set list as a link or a QR code. It opens in the
+          app, or in a browser for anyone who doesn't have it yet.
+        </p>
+      </li>
+      <li>
+        <h3>Offline first</h3>
+        <p>
+          Songs live in a local database. No account, no sync, nothing leaves
+          the phone unless you share it.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="section wrap" aria-labelledby="privacy-title">
+    <div class="section-head">
+      <span class="eyebrow">Privacy</span>
+      <h2 id="privacy-title">Nothing leaves the phone unless you share it.</h2>
+    </div>
+
+    <div class="statement">
+      <p>
+        No analytics, no adverts, no background sync. Your library is a database
+        file on your device, and it stays there.
+      </p>
+      <footer>
+        <a class="text-link" href="/privacy/">Read the full privacy note →</a>
+      </footer>
+    </div>
+
+    <ul class="privacy-points">
+      <li>
+        An account is optional — it exists so a share link can be traced back to
+        you and deleted later.
+      </li>
+      <li>
+        A share link stores exactly the sheet you sent, not the rest of your
+        library.
+      </li>
+      <li>
+        Google sign-in receives only your email address, name and profile
+        picture.
+      </li>
+    </ul>
+  </section>
+
+  <section class="section wrap" aria-labelledby="get-title">
+    <div class="section-head">
+      <span class="eyebrow">Get it</span>
+      <h2 id="get-title">Ready when you are.</h2>
+      <p>
+        ChordPlane is installed as a signed APK, straight from the releases
+        page. Updates install over the old build and keep your songs.
+      </p>
+    </div>
+
+    <div class="actions">
+      <a
+        class="btn btn-primary"
+        href="https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk"
+        rel="noopener">Download for Android</a
+      >
+      <a class="btn btn-quiet" href="/download/">Install instructions</a>
+    </div>
+    <p class="fine-print">
+      Android 7.0 or newer. iOS is not available yet.
+    </p>
+  </section>
+</Base>

@@ -1,0 +1,160 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base
+  title="Confirm your ChordPlane email"
+  description="Hands the confirmation link back to the ChordPlane app."
+  noindex={true}
+>
+  <section class="wrap confirm">
+    <div class="confirm-card">
+      <div class="mark" aria-hidden="true">C</div>
+
+      <div id="status">
+        <h1>Opening ChordPlane…</h1>
+        <p>If the app does not open automatically, use the button below.</p>
+      </div>
+
+      <div id="error" hidden>
+        <h1>That link did not work</h1>
+        <p id="error-message">
+          The confirmation link may have expired or already been used. Request
+          a new one from the sign-in screen.
+        </p>
+      </div>
+
+      <a id="open-app" class="btn btn-primary" href="chordplane://auth-callback">
+        Open ChordPlane
+      </a>
+
+      <p class="hint">
+        Reading email on a computer? Open this link on the phone where
+        ChordPlane is installed so confirmation can finish in the app.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .confirm {
+    min-height: 68vh;
+    display: grid;
+    place-items: center;
+    padding-block: 56px;
+  }
+
+  .confirm-card {
+    width: 100%;
+    max-width: 430px;
+    padding: 30px 28px;
+    text-align: center;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .mark {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+
+  h1 {
+    font-size: 1.45rem;
+  }
+
+  p {
+    margin-top: 10px;
+    margin-bottom: 20px;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  .confirm-card .btn {
+    width: 100%;
+  }
+
+  .hint {
+    margin-top: 16px;
+    margin-bottom: 0;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+</style>
+
+<script>
+  (function () {
+    const status = document.getElementById('status');
+    const error = document.getElementById('error');
+    const errorMessage = document.getElementById('error-message');
+    const openApp = document.getElementById('open-app') as HTMLAnchorElement | null;
+
+    const query = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+    const keys = [
+      'code',
+      'type',
+      'error',
+      'error_code',
+      'error_description',
+      'access_token',
+      'refresh_token',
+      'token_type',
+      'expires_in',
+      'provider_token',
+      'provider_refresh_token',
+    ];
+
+    const target = new URL('chordplane://auth-callback');
+    let hasPayload = false;
+    for (const key of keys) {
+      const value = query.get(key) || hash.get(key);
+      if (value) {
+        target.searchParams.set(key, value);
+        hasPayload = true;
+      }
+    }
+
+    const description =
+      query.get('error_description') || hash.get('error_description');
+    const errorCode = query.get('error') || hash.get('error');
+    if (description || errorCode) {
+      if (status) status.hidden = true;
+      if (error) error.hidden = false;
+      if (errorMessage && description) errorMessage.textContent = description;
+      return;
+    }
+
+    if (!hasPayload) {
+      if (status) status.hidden = true;
+      if (error) error.hidden = false;
+      if (errorMessage) {
+        errorMessage.textContent =
+          'This page expects the confirmation link from your email. ' +
+          'Open the link from your inbox, or request a new one in the app.';
+      }
+      return;
+    }
+
+    if (openApp) openApp.href = target.toString();
+
+    // Give the fallback a frame to paint before handing off to the app.
+    requestAnimationFrame(function () {
+      window.location.replace(target.toString());
+    });
+  })();
+</script>

@@ -1,11 +1,15 @@
 name: Deploy web viewer
 
-# Builds the public /s/<token> viewer and pushes its output to the
-# Chordplane-Web repo, which Vercel deploys automatically.
+# Builds two things and publishes them together:
+#   site/   → the Astro marketing site, served at /
+#   viewer  → the Flutter share viewer, served from /viewer/ and reached
+#             through the /s/* rewrite in Chordplane-Web's vercel.json.
+# The combined output is pushed to Chordplane-Web, which Vercel deploys.
 on:
   push:
     branches: [main]
     paths:
+      - 'site/**'
       - 'lib/web_viewer/**'
       - '.github/workflows/deploy-web-viewer.yml'
       - 'pubspec.yaml'
@@ -21,6 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Build marketing site
+        run: |
+          cd site
+          npm ci
+          npm run build
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -29,7 +45,27 @@ jobs:
       - run: flutter pub get
 
       - name: Build viewer
-        run: flutter build web --release --target lib/web_viewer/main.dart
+        # base-href puts the Flutter assets under /viewer/ so the marketing
+        # site can own the real root. The app still reads the browser path,
+        # so /s/<token> keeps working through the rewrite.
+        run: >
+          flutter build web --release
+          --target lib/web_viewer/main.dart
+          --output build/viewer
+          --base-href=/viewer/
+
+      - name: Assemble deploy root
+        run: |
+          mkdir -p staging
+          cp -r site/dist/. staging/
+          mkdir -p staging/viewer
+          cp -r build/viewer/. staging/viewer/
+
+          # Fail loudly rather than deploying a half-built site.
+          test -f staging/index.html
+          test -f staging/viewer/index.html
+          test -f staging/auth/confirm/index.html
+          test -f staging/404.html
 
       - name: Push to Chordplane-Web
         env:
@@ -43,7 +79,7 @@ jobs:
           find . -mindepth 1 -maxdepth 1 \
             ! -name .git ! -name vercel.json ! -name .well-known \
             -exec rm -rf {} +
-          cp -r ../build/web/* .
+          cp -r ../staging/. .
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to deploy."

@@ -1,0 +1,82 @@
+---
+// Live release information for the download button. Everything here degrades
+// to a working link when the GitHub API is unavailable or rate-limited; the
+// script only ever adds detail, it never removes the ability to download.
+---
+
+<p id="release-meta" class="release-meta">
+  Android 7.0+ · signed release build
+</p>
+<p id="release-pending" class="release-meta" hidden>
+  The first public build is not up yet — check back shortly, or look at the
+  <a href="https://github.com/danny192168/ChordPlane-v2/releases">releases</a>.
+</p>
+<p class="release-meta" id="checksum" hidden>
+  <a
+    href="https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk.sha256"
+    rel="noopener">Verify the SHA-256 checksum</a
+  >
+</p>
+
+<script>
+  (async function () {
+    const btn = document.getElementById('download-apk');
+    const meta = document.getElementById('release-meta');
+    const pending = document.getElementById('release-pending');
+    const checksum = document.getElementById('checksum');
+    if (!meta || !pending || !checksum) return;
+
+    function showPending() {
+      if (btn) {
+        btn.classList.add('is-disabled');
+        btn.setAttribute('aria-disabled', 'true');
+        btn.removeAttribute('href');
+      }
+      pending.hidden = false;
+      meta.hidden = true;
+      checksum.hidden = true;
+    }
+
+    try {
+      const res = await fetch(
+        'https://api.github.com/repos/danny192168/ChordPlane-v2/releases/latest',
+        { headers: { Accept: 'application/vnd.github+json' } }
+      );
+      // 404 means no release exists yet. Anything else (rate limit, network,
+      // CORS) must not disable a download that really is available.
+      if (res.status === 404) {
+        showPending();
+        return;
+      }
+      if (!res.ok) return;
+
+      const release = await res.json();
+      const assets = release.assets || [];
+      const apk = assets.find((a) => a.name === 'chordplane-latest.apk');
+      if (!apk) {
+        showPending();
+        return;
+      }
+
+      const parts = [];
+      if (release.tag_name) parts.push(release.tag_name);
+      if (apk.size) parts.push((apk.size / (1024 * 1024)).toFixed(1) + ' MB');
+      if (release.published_at) {
+        parts.push(
+          'released ' +
+            new Date(release.published_at).toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })
+        );
+      }
+      meta.textContent = parts.join(' · ');
+      meta.hidden = false;
+      pending.hidden = true;
+      checksum.hidden = false;
+    } catch {
+      // Network hiccup — leave the default button and meta in place.
+    }
+  })();
+</script>

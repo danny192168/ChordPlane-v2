@@ -134,7 +134,7 @@ On the web viewer the Google button is hidden; email sign-in is native-app only.
    is rate-limited, only delivers to project team members, and is not meant for
    real users.
 
-`web/auth/confirm/index.html` is the static landing page for confirmation
+`site/src/pages/auth/confirm.astro` is the landing page for confirmation
 links. It forwards the `code` (or implicit-flow tokens) to
 `chordplane://auth-callback` and shows an “Open ChordPlane” fallback when the
 email is opened on a desktop.
@@ -198,12 +198,43 @@ flutter analyze
 
 Minimums: Android API 24, iOS 15 (set by `chord_diagrams`).
 
+## Website
+
+<https://chordplane.citcs.site> is two builds published together by the
+`Deploy web viewer` workflow:
+
+| Path | Source | What it is |
+| --- | --- | --- |
+| `/` | `site/` (Astro) | landing, download, privacy, terms, `404` |
+| `/viewer/` | `lib/web_viewer/` (Flutter) | the share viewer |
+| `/s/<token>` | rewrite → `/viewer/index.html` | share links |
+| `/auth/confirm` | `site/src/pages/auth/confirm.astro` | hands email links back to the app |
+
+Run the marketing site on its own:
+
+```sh
+cd site
+npm install
+npm run dev          # http://localhost:4321
+```
+
+Build the viewer the way CI does:
+
+```sh
+flutter build web --release --target lib/web_viewer/main.dart \
+  --output build/viewer --base-href=/viewer/
+```
+
+The `/s/*` rewrite lives in `Chordplane-Web/vercel.json` and is preserved by
+the deploy on purpose. Without it, a share link lands on the marketing page
+instead of the viewer.
+
 ## Android releases and the download page
 
-The download page lives at <https://chordplane.citcs.site/download>. It is a
-static HTML/CSS page in `web/download/`, which Flutter copies into
-`build/web/download/`; the existing web-viewer deploy publishes it without any
-extra steps. The page and the app both point at one stable asset name:
+The download page lives at <https://chordplane.citcs.site/download>. It is one
+page of the Astro site in `site/`, which the web deploy builds and publishes
+alongside the share viewer. The page and the app both point at one stable asset
+name:
 
 ```
 https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk
