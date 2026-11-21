@@ -6,17 +6,20 @@
 :root {
   color-scheme: light dark;
 
-  --paper: #f7f3ea;
-  --paper-raised: #fffcf5;
-  --ink: #16222e;
-  --ink-soft: #4c5a66;
-  --ink-faint: #75828d;
-  --line: rgba(22, 34, 46, 0.14);
-  --line-strong: rgba(22, 34, 46, 0.3);
-  --accent: #a84e1e;
-  --accent-ink: #fff8f2;
-  --accent-wash: rgba(168, 78, 30, 0.09);
-  --shadow-cta: 0 14px 30px -14px rgba(22, 34, 46, 0.55);
+  /* Navy palette, shared with the app (lib/app/theme/app_theme.dart) and the
+     logo: Navy 900 #16283B, Navy 700 #3D5A80, Steel 300 #A9C0D6,
+     Mist 100 #E8EEF4. Everything else is achromatic. */
+  --paper: #f6f8fb;
+  --paper-raised: #ffffff;
+  --ink: #16283b;
+  --ink-soft: #4a5c72;
+  --ink-faint: #7b8ca0;
+  --line: rgba(22, 40, 59, 0.14);
+  --line-strong: rgba(22, 40, 59, 0.3);
+  --accent: #3d5a80;
+  --accent-ink: #ffffff;
+  --accent-wash: rgba(61, 90, 128, 0.08);
+  --shadow-cta: 0 14px 30px -14px rgba(22, 40, 59, 0.55);
 
   --radius: 10px;
   --radius-sm: 6px;
@@ -38,16 +41,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #101820;
-    --paper-raised: #16212b;
-    --ink: #f3ede2;
-    --ink-soft: #b8c2cb;
-    --ink-faint: #8b98a3;
-    --line: rgba(243, 237, 226, 0.15);
-    --line-strong: rgba(243, 237, 226, 0.32);
-    --accent: #e08a52;
-    --accent-ink: #1b1208;
-    --accent-wash: rgba(224, 138, 82, 0.12);
+    --paper: #0e1620;
+    --paper-raised: #16222f;
+    --ink: #e8eef4;
+    --ink-soft: #a9bacc;
+    --ink-faint: #7e90a5;
+    --line: rgba(232, 238, 244, 0.14);
+    --line-strong: rgba(232, 238, 244, 0.3);
+    --accent: #a9c2de;
+    --accent-ink: #0e1620;
+    --accent-wash: rgba(169, 194, 222, 0.12);
     --shadow-cta: 0 14px 30px -16px rgba(0, 0, 0, 0.8);
   }
 }
@@ -366,7 +369,7 @@ h2 {
   background: var(--paper-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 24px 60px -34px rgba(22, 34, 46, 0.5);
+  box-shadow: 0 24px 60px -34px rgba(22, 40, 59, 0.5);
 }
 
 .sheet-head {
