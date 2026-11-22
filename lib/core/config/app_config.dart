@@ -8,6 +8,11 @@
 ///   --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
 ///   --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
 /// ```
+///
+/// Locally, prefer `tool/run_dev.sh`, which reads the same values from
+/// `dart_defines.json` (gitignored; copy `dart_defines.example.json`). Because
+/// these are compile-time constants, hot reload cannot switch cloud features
+/// on — the app has to be rebuilt and reinstalled.
 class AppConfig {
   const AppConfig._();
 

@@ -52,7 +52,20 @@ The app is fully functional without any backend. To enable cloud share links:
 
 1. Create a Supabase project and run `supabase/migrations/0001_shared_bundles.sql`
    in its SQL editor.
-2. Build/run with the project credentials:
+2. Copy `dart_defines.example.json` to `dart_defines.json` (gitignored) and put
+   the project URL and publishable key in it. The example already carries the
+   public defaults the web viewer and CI use, so on this repository the copy
+   needs no edits.
+3. Run through the wrapper, which passes that file to the compiler:
+
+```sh
+tool/run_dev.sh
+```
+
+These credentials are **compile-time** defines, not runtime settings. Hot
+reload cannot turn them on, and a bare `flutter run` builds a local-only app:
+Settings shows **Local mode** and the sign-in sheet is unreachable. To pass the
+defines by hand instead:
 
 ```sh
 flutter run \
@@ -133,6 +146,13 @@ On the web viewer the Google button is hidden; email sign-in is native-app only.
 5. For production sign-ups configure **custom SMTP**; the built-in email sender
    is rate-limited, only delivers to project team members, and is not meant for
    real users.
+6. With custom SMTP, the **Sender email** must sit on a domain the provider has
+   verified. Resend, for example, rejects an unverified domain with
+   `550 "This API key is not authorized to send emails from …"`, which GoTrue
+   reports as a 500 — sign-up then looks like it succeeded while the account
+   stays unconfirmed. Add the domain under Resend → Domains, publish the DKIM
+   `TXT`, `send` subdomain `MX`/`SPF` records it shows, and wait for
+   verification before testing.
 
 `site/src/pages/auth/confirm.astro` is the landing page for confirmation
 links. It forwards the `code` (or implicit-flow tokens) to
@@ -143,7 +163,9 @@ email is opened on a desktop.
 
 Pass the public client IDs at build time. The Android release workflow reads
 them from the repository variables `GOOGLE_WEB_CLIENT_ID` and
-`GOOGLE_IOS_CLIENT_ID`:
+`GOOGLE_IOS_CLIENT_ID`. For a local run, put them in `dart_defines.json` next to
+the Supabase keys rather than typing them out (see
+[Cloud setup](#cloud-setup-optional)):
 
 ```sh
 flutter run \
@@ -191,10 +213,16 @@ provider, and an `Xcode` capability. Add it before submitting the iOS build.
 ```sh
 flutter pub get
 dart run build_runner build        # regenerate Drift code after schema edits
-flutter run                        # pick a device or emulator
+flutter run                        # pick a device or emulator (local-only build)
+tool/run_dev.sh                    # same, with cloud/auth defines compiled in
 flutter test                       # unit + widget tests
 flutter analyze
 ```
+
+`tool/run_dev.sh` forwards extra arguments, so `tool/run_dev.sh -d <device-id>`
+picks a device and `tool/run_dev.sh --release` builds a release run. It uses
+`dart_defines.json` when present and falls back to `dart_defines.example.json`
+otherwise. See [Cloud setup](#cloud-setup-optional) for what the defines do.
 
 Minimums: Android API 24, iOS 15 (set by `chord_diagrams`).
 
