@@ -1,5 +1,57 @@
-import '../features/sharing/cpl.dart';
 import '../core/config/app_config.dart';
+import '../features/sharing/cpl.dart';
+
+/// The auth-relevant fields carried by a confirmation or recovery link.
+class AuthLinkPayload {
+  const AuthLinkPayload({this.tokenHash, this.type, this.code});
+
+  /// Opaque, single-use token that `verifyOTP` redeems. Unlike a `code`, it
+  /// does not need the PKCE verifier from the requesting device, so it works
+  /// when the email is opened on a different phone or a computer.
+  final String? tokenHash;
+
+  /// `recovery`, `signup`, `invite`, `magiclink`, `email_change`.
+  final String? type;
+
+  /// PKCE authorization code, exchanged automatically by supabase_flutter.
+  final String? code;
+
+  bool get hasTokenHash => (tokenHash ?? '').isNotEmpty;
+}
+
+/// Extracts auth parameters from a link if it is one of ours.
+///
+/// Accepts the custom scheme (`chordplane://auth-callback?…`) and the share
+/// host (`https://chordplane.citcs.site/auth/confirm?…`).
+AuthLinkPayload? authPayloadForLink(String raw) {
+  final uri = Uri.tryParse(raw.trim());
+  if (uri == null) return null;
+
+  final isCustomScheme = uri.scheme == CplFormat.customScheme;
+  final isAppHost =
+      uri.host == 'chordplane.app' ||
+      uri.host == Uri.parse(AppConfig.shareHost).host;
+  if (!isCustomScheme && !isAppHost) return null;
+
+  final target = uri.host.isNotEmpty
+      ? uri.host
+      : (uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '');
+  final isAuthTarget = isCustomScheme
+      ? (target == 'auth-callback' || target == 'reset-password')
+      : (uri.pathSegments.length >= 2 &&
+            uri.pathSegments[0] == 'auth' &&
+            uri.pathSegments[1] == 'confirm');
+  if (!isAuthTarget) return null;
+
+  final query = uri.queryParameters;
+  final payload = AuthLinkPayload(
+    tokenHash: query['token_hash'],
+    type: query['type'],
+    code: query['code'],
+  );
+  if (!payload.hasTokenHash && (payload.code ?? '').isEmpty) return null;
+  return payload;
+}
 
 /// Maps an incoming deep link or platform route onto an app location.
 ///
@@ -10,6 +62,19 @@ import '../core/config/app_config.dart';
 String routeForIncomingLink(String raw) {
   final input = raw.trim();
   if (input.isEmpty) return '/';
+
+  final auth = authPayloadForLink(input);
+  if (auth != null && auth.hasTokenHash) {
+    // Hand the token to a screen that can redeem it before the user sees
+    // anything else; this is what makes a link opened on another device work.
+    return Uri(
+      path: '/auth/confirm',
+      queryParameters: {
+        'token_hash': auth.tokenHash!,
+        'type': auth.type ?? 'recovery',
+      },
+    ).toString();
+  }
 
   final uri = Uri.tryParse(input);
   final isCustomScheme = uri != null && uri.scheme == CplFormat.customScheme;

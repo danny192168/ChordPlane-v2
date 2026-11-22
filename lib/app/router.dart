@@ -8,6 +8,7 @@ import '../features/setlists/setlists_screen.dart';
 import '../features/setlists/setlist_detail_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/sharing/cpl.dart';
+import '../features/sharing/cloud/auth_confirm_screen.dart';
 import '../features/sharing/cloud/my_shares_screen.dart';
 import '../features/sharing/cloud/password_reset.dart';
 import '../features/sharing/import_screen.dart';
@@ -123,6 +124,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/reset-password',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/auth/confirm',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => AuthConfirmScreen(
+          tokenHash: state.uri.queryParameters['token_hash'] ?? '',
+          type: state.uri.queryParameters['type'] ?? 'signup',
+        ),
       ),
       GoRoute(
         path: '/set-new-password',

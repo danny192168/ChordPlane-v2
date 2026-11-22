@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/auth/google_auth.dart';
 import '../../../core/config/app_config.dart';
 import 'auth_api.dart';
+import 'auth_widgets.dart';
 import 'password_reset.dart';
 
 export 'auth_api.dart';
@@ -35,15 +36,19 @@ class _SignInGate extends ConsumerStatefulWidget {
 class _SignInGateState extends ConsumerState<_SignInGate> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _code = TextEditingController();
   bool _createAccount = false;
   bool _busy = false;
+  bool _verifyingCode = false;
+  String? _emailError;
+  String? _passwordError;
+  String? _codeError;
   String? _message;
   bool _messageIsError = true;
 
   /// Set after sign-up (or an unconfirmed/already-registered error) so the
-  /// sheet can offer a resend action for the address that needs it.
+  /// sheet can offer a code field and a resend action for that address.
   String? _confirmationEmail;
-  bool _sendingConfirmation = false;
 
   SignInApi get _api => ref.read(signInApiProvider);
 
@@ -51,6 +56,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _code.dispose();
     super.dispose();
   }
 
@@ -70,7 +76,11 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _createAccount ? 'Create account' : 'Sign in',
+            _confirmationEmail != null
+                ? 'Confirm your email'
+                : _createAccount
+                ? 'Create account'
+                : 'Sign in',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
@@ -85,7 +95,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          if (showGoogle) ...[
+          if (showGoogle && _confirmationEmail == null) ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -128,92 +138,135 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
               children: [
                 TextField(
                   controller: _email,
+                  enabled: !_busy,
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: Icon(Icons.alternate_email, size: 20),
+                    prefixIcon: const Icon(Icons.alternate_email, size: 20),
+                    errorText: _emailError,
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
+                PasswordField(
                   controller: _password,
-                  obscureText: true,
-                  autofillHints: const [AutofillHints.password],
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline, size: 20),
-                  ),
+                  label: 'Password',
+                  isNewPassword: _createAccount,
+                  enabled: !_busy,
+                  errorText: _passwordError,
+                  onSubmitted: _submit,
                 ),
               ],
             ),
           ),
+          if (_createAccount) ...[
+            const SizedBox(height: 8),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _password,
+              builder: (context, value, _) =>
+                  PasswordStrength(password: value.text),
+            ),
+          ],
           if (_message != null) ...[
             const SizedBox(height: 10),
-            Text(
-              _message!,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.35,
-                color: _messageIsError
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.primary,
-              ),
-            ),
+            AuthBanner(message: _message!, isError: _messageIsError),
           ],
           if (_confirmationEmail != null) ...[
-            const SizedBox(height: 2),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: _sendingConfirmation ? null : _resendConfirmation,
-                child: Text(
-                  _sendingConfirmation
-                      ? 'Sending…'
-                      : 'Resend confirmation email',
-                ),
+            const SizedBox(height: 14),
+            Text(
+              'Open the link in the email, or enter the 6-digit code it '
+              'contains.',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.4,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 10),
+            EmailCodeField(
+              controller: _code,
+              enabled: !_verifyingCode,
+              errorText: _codeError,
+              onSubmitted: _verifyCode,
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _verifyingCode ? null : _verifyCode,
+                child: _verifyingCode
+                    ? const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ButtonSpinner(),
+                          SizedBox(width: 8),
+                          Text('Checking…'),
+                        ],
+                      )
+                    : const Text('Confirm email'),
+              ),
+            ),
+            CooldownTextButton(
+              label: 'Resend confirmation email',
+              busyLabel: 'Sending…',
+              onPressed: _resendConfirmation,
+            ),
+          ] else ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _busy ? null : _submit,
+                child: _busy
+                    ? const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ButtonSpinner(),
+                          SizedBox(width: 8),
+                          Text('Please wait…'),
+                        ],
+                      )
+                    : Text(_createAccount ? 'Create account' : 'Sign in'),
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: Text(
-                _busy
-                    ? 'Please wait…'
-                    : (_createAccount ? 'Create account' : 'Sign in'),
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
+          if (_confirmationEmail == null) ...[
+            TextButton(
               onPressed: _busy ? null : _openPasswordReset,
               child: const Text('Forgot password?'),
             ),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: _busy
-                  ? null
-                  : () => setState(() {
-                      _createAccount = !_createAccount;
-                      _message = null;
-                      _confirmationEmail = null;
-                    }),
-              child: Text(
-                _createAccount
-                    ? 'I already have an account — sign in instead'
-                    : 'New here? Create an account',
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => setState(() {
+                        _createAccount = !_createAccount;
+                        _message = null;
+                        _confirmationEmail = null;
+                        _emailError = null;
+                        _passwordError = null;
+                      }),
+                child: Text(
+                  _createAccount
+                      ? 'I already have an account — sign in instead'
+                      : 'New here? Create an account',
+                ),
               ),
             ),
-          ),
+          ] else
+            TextButton(
+              onPressed: _verifyingCode
+                  ? null
+                  : () => setState(() {
+                      _confirmationEmail = null;
+                      _message = null;
+                      _codeError = null;
+                      _code.clear();
+                    }),
+              child: const Text('Back to sign in'),
+            ),
         ],
       ),
     );
@@ -237,10 +290,10 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
       if (!error.canceled && mounted) _show(error.message);
     } on AuthException catch (error) {
       debugPrint('Google auth failed: ${error.message}');
-      if (mounted) _show(friendlyAuthMessage(error));
+      if (mounted) _show(describeAuthFailure(error).message);
     } catch (error) {
       debugPrint('Google auth failed unexpectedly: $error');
-      if (mounted) _show('Could not reach the server: $error');
+      if (mounted) _show(offlineAuthMessage);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -249,12 +302,20 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
   Future<void> _submit() async {
     final email = _email.text.trim();
     final password = _password.text;
-    if (email.isEmpty || !email.contains('@')) {
-      _show('Enter a valid email address.');
-      return;
-    }
-    if (password.length < 8) {
-      _show('Password needs at least 8 characters.');
+    final emailProblem = isPlausibleEmail(email)
+        ? null
+        : 'Enter a valid email address.';
+    final passwordProblem = password.isEmpty
+        ? 'Enter your password.'
+        : _createAccount && password.length < minPasswordLength
+        ? 'Password needs at least $minPasswordLength characters.'
+        : null;
+    if (emailProblem != null || passwordProblem != null) {
+      setState(() {
+        _emailError = emailProblem;
+        _passwordError = passwordProblem;
+        _message = null;
+      });
       return;
     }
     if (AppConfig.supabaseInitError != null) {
@@ -264,6 +325,8 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
     setState(() {
       _busy = true;
       _message = null;
+      _emailError = null;
+      _passwordError = null;
       _confirmationEmail = null;
     });
     try {
@@ -271,45 +334,109 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
         final response = await authCall(() => _api.signUp(email, password));
         if (!mounted) return;
         if (response.session == null) {
-          setState(() => _confirmationEmail = email);
-          _show(
-            'Check your inbox — confirm your email, then sign in.',
-            isError: false,
-          );
+          _showConfirmation(email);
           return;
         }
-        if (mounted) Navigator.of(context).pop();
+        Navigator.of(context).pop();
         return;
       }
       await authCall(() => _api.signIn(email, password));
       if (mounted) Navigator.of(context).pop();
     } on AuthException catch (error) {
       debugPrint('Auth failed: ${error.message}');
-      final text = error.message.toLowerCase();
-      if (_createAccount &&
-          (text.contains('already registered') ||
-              text.contains('already exists'))) {
-        if (mounted) setState(() => _confirmationEmail = email);
-      } else if (!_createAccount && text.contains('email not confirmed')) {
-        if (mounted) setState(() => _confirmationEmail = email);
+      final failure = describeAuthFailure(error);
+      if (mounted) {
+        if (_createAccount &&
+            failure.kind == AuthFailureKind.emailAlreadyRegistered) {
+          // Neutral on purpose: the sheet should not confirm whether an
+          // address already has an account. Offer the resend action in case
+          // the account is real but still unconfirmed.
+          _showConfirmation(
+            email,
+            message:
+                'If that email is new, check your inbox to confirm it. If it '
+                'already has an account, sign in instead.',
+          );
+          return;
+        }
+        if (!_createAccount &&
+            failure.kind == AuthFailureKind.emailNotConfirmed) {
+          _showConfirmation(email, message: failure.message);
+          return;
+        }
+        _show(failure.message);
       }
-      _show(friendlyAuthMessage(error));
     } catch (error) {
       // Anything else (offline, DNS, hanging connection, uninitialized
       // client) must still surface — silent failure looks like a hang.
       debugPrint('Auth failed unexpectedly: $error');
-      _show('Could not reach the server: $error');
+      _show(offlineAuthMessage);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _resendConfirmation() async {
+  void _showConfirmation(String email, {String? message}) {
+    setState(() {
+      _confirmationEmail = email;
+      _codeError = null;
+      _code.clear();
+      _message = message ?? 'Check your inbox — confirm your email, then sign in.';
+      _messageIsError = false;
+    });
+  }
+
+  Future<void> _verifyCode() async {
     final email = _confirmationEmail;
     if (email == null) return;
+    final code = _code.text.trim();
+    if (code.length != 6) {
+      setState(() {
+        _codeError = 'Enter the 6-digit code from the email.';
+        _message = null;
+      });
+      return;
+    }
     setState(() {
-      _sendingConfirmation = true;
+      _verifyingCode = true;
+      _codeError = null;
       _message = null;
+    });
+    try {
+      await authCall(
+        () => _api.verifyEmailCode(
+          email: email,
+          code: code,
+          type: OtpType.signup,
+        ),
+      );
+      if (mounted) Navigator.of(context).pop();
+    } on AuthException catch (error) {
+      debugPrint('Confirmation code failed: ${error.message}');
+      if (!mounted) return;
+      final failure = describeAuthFailure(error);
+      if (failure.kind == AuthFailureKind.expiredToken) {
+        setState(() {
+          _codeError = 'That code is not right or has expired. Resend the '
+              'email and use the newest code.';
+        });
+      } else {
+        _show(failure.message);
+      }
+    } catch (error) {
+      debugPrint('Confirmation code failed unexpectedly: $error');
+      if (mounted) _show(offlineAuthMessage);
+    } finally {
+      if (mounted) setState(() => _verifyingCode = false);
+    }
+  }
+
+  Future<bool> _resendConfirmation() async {
+    final email = _confirmationEmail;
+    if (email == null) return false;
+    setState(() {
+      _message = null;
+      _codeError = null;
     });
     try {
       await authCall(() => _api.resendConfirmation(email));
@@ -317,12 +444,14 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
         'Confirmation email sent. Check your inbox (and spam).',
         isError: false,
       );
+      return true;
     } on AuthException catch (error) {
-      _show(friendlyAuthMessage(error));
+      _show(describeAuthFailure(error).message);
+      return false;
     } catch (error) {
-      _show('Could not send the email: $error');
-    } finally {
-      if (mounted) setState(() => _sendingConfirmation = false);
+      debugPrint('Confirmation resend failed: $error');
+      _show(offlineAuthMessage);
+      return false;
     }
   }
 
@@ -348,7 +477,6 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
     setState(() {
       _message = message;
       _messageIsError = isError;
-      _busy = false;
     });
   }
 }
