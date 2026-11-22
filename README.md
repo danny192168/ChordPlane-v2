@@ -329,3 +329,5 @@ lib/
   before the first diagram is drawn; `main()` handles that.
 - Chord spelling follows the Settings preference, falling back to the song key.
 - iOS builds additionally require CocoaPods (`brew install cocoapods`).
+
+<!-- Nov 22, 2026 -->
