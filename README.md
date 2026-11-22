@@ -98,12 +98,12 @@ On the web viewer the Google button is hidden; email sign-in is native-app only.
    request only `openid`, `.../auth/userinfo.email` and
    `.../auth/userinfo.profile` under **Data Access**. Then create four clients:
 
-   | Type | Configuration |
-   | --- | --- |
+   | Type            | Configuration                                                                        |
+   | --------------- | ------------------------------------------------------------------------------------ |
    | Web application | Authorized redirect URI: `https://eweppodjncodtsiljvak.supabase.co/auth/v1/callback` |
-   | Android | Package name `app.chordplane.chord_plane` plus the release SHA-1 below |
-   | Android | Same package name plus the debug SHA-1 below |
-   | iOS | Bundle ID `app.chordplane.chordPlane` |
+   | Android         | Package name `app.chordplane.chord_plane` plus the release SHA-1 below               |
+   | Android         | Same package name plus the debug SHA-1 below                                         |
+   | iOS             | Bundle ID `app.chordplane.chordPlane`                                                |
 
    An OAuth client holds a single SHA-1, so release and debug builds need
    separate Android clients. Only the Web client has a secret; the Android and
@@ -231,12 +231,12 @@ Minimums: Android API 24, iOS 15 (set by `chord_diagrams`).
 <https://chordplane.citcs.site> is two builds published together by the
 `Deploy web viewer` workflow:
 
-| Path | Source | What it is |
-| --- | --- | --- |
-| `/` | `site/` (Astro) | landing, download, privacy, terms, `404` |
-| `/viewer/` | `lib/web_viewer/` (Flutter) | the share viewer |
-| `/s/<token>` | rewrite → `/viewer/index.html` | share links |
-| `/auth/confirm` | `site/src/pages/auth/confirm.astro` | hands email links back to the app |
+| Path            | Source                              | What it is                               |
+| --------------- | ----------------------------------- | ---------------------------------------- |
+| `/`             | `site/` (Astro)                     | landing, download, privacy, terms, `404` |
+| `/viewer/`      | `lib/web_viewer/` (Flutter)         | the share viewer                         |
+| `/s/<token>`    | rewrite → `/viewer/index.html`      | share links                              |
+| `/auth/confirm` | `site/src/pages/auth/confirm.astro` | hands email links back to the app        |
 
 Run the marketing site on its own:
 
@@ -287,12 +287,12 @@ release without re-pushing the tag.
 
 Signing secrets (`Settings → Secrets and variables → Actions`):
 
-| Secret | Value |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | `base64 -i keys/chordplane-release.keystore` |
-| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
-| `ANDROID_KEY_ALIAS` | key alias |
-| `ANDROID_KEY_PASSWORD` | key password |
+| Secret                      | Value                                        |
+| --------------------------- | -------------------------------------------- |
+| `ANDROID_KEYSTORE_BASE64`   | `base64 -i keys/chordplane-release.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore password                            |
+| `ANDROID_KEY_ALIAS`         | key alias                                    |
+| `ANDROID_KEY_PASSWORD`      | key password                                 |
 
 Optional repository variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` override
 the compiled-in cloud credentials; the workflow otherwise falls back to the
