@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/auth/auth_gateway.dart';
 import 'auth_api.dart';
 
 /// Redeems the `token_hash` carried by a confirmation or recovery link.
@@ -27,18 +28,17 @@ class AuthConfirmScreen extends ConsumerStatefulWidget {
 
 class _AuthConfirmScreenState extends ConsumerState<AuthConfirmScreen> {
   bool _busy = true;
+  bool _finishing = false;
   String? _error;
 
-  OtpType get _otpType => switch (widget.type.toLowerCase().replaceAll(
-    '_',
-    '',
-  )) {
-    'recovery' => OtpType.recovery,
-    'invite' => OtpType.invite,
-    'magiclink' => OtpType.magiclink,
-    'emailchange' => OtpType.emailChange,
-    _ => OtpType.signup,
-  };
+  OtpType get _otpType =>
+      switch (widget.type.toLowerCase().replaceAll('_', '')) {
+        'recovery' => OtpType.recovery,
+        'invite' => OtpType.invite,
+        'magiclink' => OtpType.magiclink,
+        'emailchange' => OtpType.emailChange,
+        _ => OtpType.signup,
+      };
 
   bool get _isRecovery => _otpType == OtpType.recovery;
 
@@ -51,6 +51,13 @@ class _AuthConfirmScreenState extends ConsumerState<AuthConfirmScreen> {
   }
 
   Future<void> _redeem() async {
+    // supabase_flutter exchanges auth links on its own before this screen
+    // runs. If that already produced a session, the token is spent: redeeming
+    // it again would fail with a misleading "link expired" message.
+    if (ref.read(signedInProvider).value == true) {
+      _finish();
+      return;
+    }
     if (widget.tokenHash.isEmpty) {
       setState(() {
         _busy = false;
@@ -64,13 +71,7 @@ class _AuthConfirmScreenState extends ConsumerState<AuthConfirmScreen> {
             .read(signInApiProvider)
             .verifyEmailLink(tokenHash: widget.tokenHash, type: _otpType),
       );
-      if (!mounted) return;
-      final router = GoRouter.maybeOf(context);
-      if (router == null) {
-        setState(() => _busy = false);
-        return;
-      }
-      router.go(_isRecovery ? '/set-new-password' : '/');
+      _finish();
     } on AuthException catch (error) {
       debugPrint('Auth link failed: ${error.message}');
       if (mounted) {
@@ -90,11 +91,30 @@ class _AuthConfirmScreenState extends ConsumerState<AuthConfirmScreen> {
     }
   }
 
+  /// Leaves this screen once a session exists: the new-password screen after a
+  /// recovery, the library after a sign-up confirmation.
+  void _finish() {
+    if (!mounted || _finishing) return;
+    _finishing = true;
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      _finishing = false;
+      setState(() => _busy = false);
+      return;
+    }
+    router.go(_isRecovery ? '/set-new-password' : '/');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // The link may finish signing in a moment after this screen appears; follow
+    // it instead of waiting on our own redemption.
+    ref.listen(signedInProvider, (previous, next) {
+      if (next.value == true) _finish();
+    });
     return Scaffold(
-      appBar: AppBar(title: const Text('Confirm email')),
+      appBar: AppBar(title: Text(_busy ? 'Finishing sign-in…' : 'Sign in')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -135,9 +155,9 @@ class _AuthConfirmScreenState extends ConsumerState<AuthConfirmScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
-                          onPressed: () => GoRouter.of(
-                            context,
-                          ).go(_isRecovery ? '/reset-password' : '/'),
+                          onPressed: () =>
+                              GoRouter.of(context)
+                                  .go(_isRecovery ? '/reset-password' : '/'),
                           child: Text(
                             _isRecovery ? 'Send a new reset email' : 'Back',
                           ),

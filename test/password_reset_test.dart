@@ -28,7 +28,7 @@ void main() {
     testWidgets('validates the email address', (tester) async {
       await pump(tester, const ResetPasswordScreen());
 
-      await tester.tap(find.text('Send reset link'));
+      await tester.tap(find.text('Send reset email'));
       await tester.pump();
 
       expect(find.text('Enter a valid email address.'), findsOneWidget);
@@ -41,26 +41,61 @@ void main() {
       await pump(tester, const ResetPasswordScreen());
 
       await tester.enterText(find.byType(TextField), 't@example.com');
-      await tester.tap(find.text('Send reset link'));
+      await tester.tap(find.text('Send reset email'));
       await tester.pumpAndSettle();
 
       expect(api.resetEmails, ['t@example.com']);
       expect(find.text('Check your inbox'), findsOneWidget);
-      expect(find.textContaining('t@example.com'), findsOneWidget);
+      // The address is masked: first characters plus dots, never the whole
+      // inbox name on a shared screen.
+      expect(find.textContaining('t•'), findsOneWidget);
+    });
+
+    testWidgets('a 6-digit code completes recovery', (tester) async {
+      await pump(tester, const ResetPasswordScreen());
+
+      await tester.enterText(find.byType(TextField), 't@example.com');
+      await tester.tap(find.text('Send reset email'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '123456');
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(api.verifiedCodes, ['t@example.com:123456:recovery']);
+      expect(find.text('Save new password'), findsOneWidget);
+    });
+
+    testWidgets('rejects a code that is not six digits', (tester) async {
+      await pump(tester, const ResetPasswordScreen());
+
+      await tester.enterText(find.byType(TextField), 't@example.com');
+      await tester.tap(find.text('Send reset email'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '123');
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+
+      expect(
+        find.text('Enter the 6-digit code from the email.'),
+        findsOneWidget,
+      );
+      expect(api.verifiedCodes, isEmpty);
     });
 
     testWidgets('surfaces a failed request', (tester) async {
-      api.resetFailure = const AuthApiException(
+      api.resetFailure = const AuthException(
         'Email rate limit exceeded',
         statusCode: '429',
       );
       await pump(tester, const ResetPasswordScreen());
 
       await tester.enterText(find.byType(TextField), 't@example.com');
-      await tester.tap(find.text('Send reset link'));
+      await tester.tap(find.text('Send reset email'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Too many attempts'), findsOneWidget);
+      expect(find.textContaining('already sent a few emails'), findsOneWidget);
       expect(find.text('Check your inbox'), findsNothing);
     });
   });
@@ -75,7 +110,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.text('Password needs at least 8 characters.'),
+        find.text('Password needs at least 10 characters.'),
         findsOneWidget,
       );
       expect(api.updatedPasswords, isEmpty);
@@ -123,8 +158,10 @@ void main() {
 class _FakeSignInApi implements SignInApi {
   final resetEmails = <String>[];
   final updatedPasswords = <String>[];
+  final verifiedCodes = <String>[];
   Object? resetFailure;
   Object? updateFailure;
+  Object? verifyFailure;
 
   @override
   Future<void> resetPassword(String email) async {
@@ -132,6 +169,26 @@ class _FakeSignInApi implements SignInApi {
     if (failure != null) throw failure;
     resetEmails.add(email);
   }
+
+  @override
+  Future<AuthResponse> verifyEmailCode({
+    required String email,
+    required String code,
+    required OtpType type,
+  }) async {
+    final failure = verifyFailure;
+    if (failure != null) throw failure;
+    verifiedCodes.add('$email:$code:${type.name}');
+    return _emptyResponse();
+  }
+
+  @override
+  Future<AuthResponse> verifyEmailLink({
+    required String tokenHash,
+    required OtpType type,
+  }) async => _emptyResponse();
+
+  AuthResponse _emptyResponse() => AuthResponse();
 
   @override
   Future<void> updatePassword(String password) async {

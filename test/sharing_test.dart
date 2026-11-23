@@ -152,6 +152,22 @@ void main() {
       );
     });
 
+    test('routes token_hash links through the confirm screen', () {
+      final route = routeForIncomingLink(
+        'https://chordplane.citcs.site/auth/confirm'
+        '?token_hash=abc123&type=recovery',
+      );
+      expect(route, startsWith('/auth/confirm?'));
+      expect(route, contains('token_hash=abc123'));
+      expect(route, contains('type=recovery'));
+
+      final payload = authPayloadForLink(
+        'chordplane://auth-callback?token_hash=abc123&type=signup',
+      );
+      expect(payload?.tokenHash, 'abc123');
+      expect(payload?.type, 'signup');
+    });
+
     test('identifies auth links without mistaking share links', () {
       expect(isAuthDeepLink('chordplane://auth-callback?code=abc'), isTrue);
       expect(

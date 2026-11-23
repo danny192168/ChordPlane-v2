@@ -106,10 +106,7 @@ class _CooldownTextButtonState extends State<CooldownTextButton> {
         : widget.label;
     return Align(
       alignment: widget.alignment,
-      child: TextButton(
-        onPressed: blocked ? null : _handle,
-        child: Text(text),
-      ),
+      child: TextButton(onPressed: blocked ? null : _handle, child: Text(text)),
     );
   }
 }
@@ -167,7 +164,9 @@ class _PasswordFieldState extends State<PasswordField> {
           tooltip: _obscured ? 'Show password' : 'Hide password',
           onPressed: () => setState(() => _obscured = !_obscured),
           icon: Icon(
-            _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            _obscured
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
             size: 20,
           ),
         ),
@@ -280,9 +279,11 @@ class PasswordStrength extends StatelessWidget {
     var score = 0;
     if (password.length >= minPasswordLength) score += 1;
     if (password.length >= 14) score += 1;
-    final mixed = password.contains(RegExp('[a-z]')) &&
+    final mixed =
+        password.contains(RegExp('[a-z]')) &&
         password.contains(RegExp('[A-Z]'));
-    final varied = password.contains(RegExp('[^A-Za-z0-9]')) ||
+    final varied =
+        password.contains(RegExp('[^A-Za-z0-9]')) ||
         (mixed && password.contains(RegExp('[0-9]')));
     if (varied) score += 1;
     return score;
@@ -336,6 +337,122 @@ class PasswordStrength extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Counts down to [until] and then tells the parent the wait is over.
+///
+/// The sheet keeps its Sign in button disabled while this is on screen, so a
+/// scripted attempt cannot just ignore the throttle by pressing again.
+class RetryCountdown extends StatefulWidget {
+  const RetryCountdown({
+    super.key,
+    required this.until,
+    this.onExpired,
+    this.prefix = 'Too many attempts.',
+  });
+
+  final DateTime until;
+  final VoidCallback? onExpired;
+  final String prefix;
+
+  @override
+  State<RetryCountdown> createState() => _RetryCountdownState();
+}
+
+class _RetryCountdownState extends State<RetryCountdown> {
+  Timer? _ticker;
+  int _seconds = 0;
+  bool _notified = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restart();
+  }
+
+  @override
+  void didUpdateWidget(RetryCountdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.until != widget.until) {
+      _notified = false;
+      _restart();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  static int _secondsUntil(DateTime until) {
+    final remaining = until.difference(DateTime.now()).inSeconds;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  void _restart() {
+    _ticker?.cancel();
+    _seconds = _secondsUntil(widget.until);
+    if (_seconds <= 0) {
+      _expire();
+      return;
+    }
+    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      // Prefer the real remaining time so a backgrounded app catches up, but
+      // never stall: in tests (and if the clock is unavailable) each tick still
+      // makes progress.
+      final actual = _secondsUntil(widget.until);
+      final stepped = _seconds - 1;
+      setState(() => _seconds = actual < stepped ? actual : stepped);
+      if (_seconds <= 0) _expire();
+    });
+  }
+
+  void _expire() {
+    _ticker?.cancel();
+    _ticker = null;
+    if (_notified) return;
+    _notified = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onExpired?.call();
+    });
+  }
+
+  static String _format(int seconds) {
+    final minutes = seconds ~/ 60;
+    final rest = (seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$rest';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_seconds <= 0) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lock_clock_outlined, size: 16, color: scheme.error),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              '${widget.prefix} Try again in ${_format(_seconds)}.',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: scheme.error,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

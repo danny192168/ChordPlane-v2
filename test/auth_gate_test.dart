@@ -1,9 +1,13 @@
+import 'dart:async';
+
+import 'package:chord_plane/core/auth/auth_gateway.dart';
 import 'package:chord_plane/core/auth/google_auth.dart';
 import 'package:chord_plane/features/sharing/cloud/auth_gate_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gotrue/gotrue.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Exercises the sign-in gate's behaviour with faked [SignInApi] and
 /// [GoogleAuthApi] implementations: success closes the sheet, credential
@@ -42,6 +46,8 @@ void main() {
   }
 
   setUp(() {
+    // The throttle persists to preferences; give each test a clean store.
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     failWith = <Object?>[null];
     delay = Duration.zero;
     returnsSessionlessResponse = false;
@@ -53,7 +59,7 @@ void main() {
           final failure = failWith.removeAt(0);
           if (failure is Exception) throw failure;
           if (failure is String) {
-            throw AuthApiException(failure, statusCode: '400');
+            throw AuthException(failure, statusCode: '400');
           }
         }
         return fakeResponse();
@@ -69,6 +75,7 @@ void main() {
     WidgetTester tester, {
     bool googleEnabled = false,
     GoogleAuthApi? googleAuth,
+    AuthGateway? gateway,
   }) async {
     // The default 800x600 window is shorter than the sheet.
     tester.view.physicalSize = const Size(800, 1600);
@@ -81,6 +88,7 @@ void main() {
           signInApiProvider.overrideWithValue(api),
           googleSignInEnabledProvider.overrideWithValue(googleEnabled),
           googleAuthProvider.overrideWithValue(googleAuth ?? google),
+          if (gateway != null) authGatewayProvider.overrideWithValue(gateway),
         ],
         child: const MaterialApp(home: Scaffold(body: _GateHost())),
       ),
@@ -134,7 +142,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.textContaining('Confirm your email'), findsOneWidget);
+    expect(find.text('Confirm your email'), findsOneWidget);
     expect(find.text('Resend confirmation email'), findsOneWidget);
 
     await tester.tap(find.text('Resend confirmation email'));
@@ -191,9 +199,32 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.textContaining('confirm your email'), findsOneWidget);
-    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.textContaining('confirm your email'), findsWidgets);
+    expect(find.text('6-digit code'), findsOneWidget);
+    // The email and password fields give way to the code entry.
+    expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Resend confirmation email'), findsOneWidget);
+  });
+
+  testWidgets('a confirmation code signs the member in and closes the sheet', (
+    tester,
+  ) async {
+    returnsSessionlessResponse = true;
+
+    await pumpGate(tester);
+    await tester.tap(find.text('New here? Create an account'));
+    await tester.pump();
+    await submit(tester, label: 'Create account');
+    await tester.pumpAndSettle();
+
+    expect(find.text('6-digit code'), findsOneWidget);
+
+    returnsSessionlessResponse = false;
+    await tester.enterText(find.byType(TextField), '123456');
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm email'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
   });
 
   testWidgets('Google button is hidden until a client ID is configured', (
@@ -253,7 +284,71 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Reset password'), findsOneWidget);
-    expect(find.text('Send reset link'), findsOneWidget);
+    expect(find.text('Send reset email'), findsOneWidget);
+  });
+
+  testWidgets('a link that signs the member in closes the open sheet', (
+    tester,
+  ) async {
+    final gateway = _FakeAuthGateway();
+    await pumpGate(tester, gateway: gateway);
+    expect(find.byType(TextField), findsNWidgets(2));
+
+    // This is what a confirmation link (or a redeemed code) looks like from
+    // the sheet's point of view: a session appears behind its back.
+    gateway.emit(true);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('repeated wrong passwords start a visible countdown', (
+    tester,
+  ) async {
+    failWith = List<String>.filled(
+      4,
+      'Invalid login credentials',
+      growable: true,
+    );
+
+    await pumpGate(tester);
+    for (var attempt = 0; attempt < 4; attempt++) {
+      await submit(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    await tester.pump();
+
+    expect(find.textContaining('Wrong email or password.'), findsOneWidget);
+    expect(find.textContaining('Try again in'), findsOneWidget);
+
+    // The button is disabled while the countdown runs.
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Sign in'),
+    );
+    expect(button.onPressed, isNull);
+
+    // Let the cooldown finish so no timer outlives the test.
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pump();
+    expect(find.textContaining('Try again in'), findsNothing);
+  });
+
+  testWidgets('a successful sign-in clears earlier failures', (tester) async {
+    // Two earlier typos, below the free-attempt limit, so no countdown is
+    // involved; the sign-in should still wipe them.
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'auth.attempts.failures.t@example.com': 2,
+    });
+
+    await pumpGate(tester);
+    await submit(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('auth.attempts.failures.t@example.com'), isNull);
   });
 }
 
@@ -293,10 +388,49 @@ class _FakeSignInApi implements SignInApi {
   Future<void> resetPassword(String email) => onReset(email);
 
   @override
+  Future<AuthResponse> verifyEmailCode({
+    required String email,
+    required String code,
+    required OtpType type,
+  }) => call();
+
+  @override
+  Future<AuthResponse> verifyEmailLink({
+    required String tokenHash,
+    required OtpType type,
+  }) => call();
+
+  @override
   Future<void> updatePassword(String password) => onUpdatePassword(password);
 
   @override
   Future<void> signOut() => onSignOut();
+}
+
+/// Lets a test make a session appear the way a deep link would.
+class _FakeAuthGateway implements AuthGateway {
+  final _signedIn = StreamController<bool>.broadcast();
+
+  void emit(bool value) => _signedIn.add(value);
+
+  @override
+  Stream<bool> get signedInChanges => _signedIn.stream;
+
+  @override
+  Stream<String?> get userIdChanges => const Stream<String?>.empty();
+
+  @override
+  Stream<AuthChangeEvent> get authEvents =>
+      const Stream<AuthChangeEvent>.empty();
+
+  @override
+  bool get isSignedIn => false;
+
+  @override
+  String? get currentUserId => null;
+
+  @override
+  String? get currentUserEmail => null;
 }
 
 class _FakeGoogleAuth implements GoogleAuthApi {

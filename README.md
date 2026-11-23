@@ -82,11 +82,14 @@ also supported, but stays hidden until a Google client ID is compiled in (see
 Sign-in is only needed to create cloud share links; the library works without
 an account. The app supports:
 
-- **Email + password** — sign up, confirmation email, resend confirmation.
+- **Email + password** — sign up with a confirmation email, then either open the
+  link or type the six-digit code from it. Resend is rate-limited with a
+  countdown.
 - **Google** — the native Android/iOS account picker, exchanged for a Supabase
   session with `signInWithIdToken`.
-- **Password reset** — a `chordplane://reset-password` link opens the
-  “choose a new password” screen.
+- **Password reset** — a reset email carries both a `token_hash` link and a
+  six-digit code; the code is what makes recovery work when the email is opened
+  on a different device.
 
 On the web viewer the Google button is hidden; email sign-in is native-app only.
 
@@ -154,10 +157,61 @@ On the web viewer the Google button is hidden; email sign-in is native-app only.
    `TXT`, `send` subdomain `MX`/`SPF` records it shows, and wait for
    verification before testing.
 
-`site/src/pages/auth/confirm.astro` is the landing page for confirmation
-links. It forwards the `code` (or implicit-flow tokens) to
+`site/src/pages/auth/confirm.astro` is the landing page for confirmation and
+recovery links. It forwards `code`, `token_hash` and `type` to
 `chordplane://auth-callback` and shows an “Open ChordPlane” fallback when the
 email is opened on a desktop.
+
+### Email templates: codes and links
+
+Supabase only includes a six-digit code when the template renders
+`{{ .Token }}`. Replace the **Confirm signup** and **Reset password** bodies
+under **Authentication → Emails** (keep their subjects) with these:
+
+```html
+<!-- Confirm signup -->
+<h2>Confirm your email</h2>
+<p>Welcome to ChordPlane. Enter this code in the app:</p>
+<p style="font-size:28px;font-weight:700;letter-spacing:8px;font-family:ui-monospace,Menlo,monospace;margin:20px 0">{{ .Token }}</p>
+<p>Or open this link on the phone where ChordPlane is installed:</p>
+<p><a href="https://chordplane.citcs.site/auth/confirm?token_hash={{ .TokenHash }}&type=signup">Confirm my email</a></p>
+<p style="color:#666;font-size:13px">The code and link expire in one hour. If you did not sign up, ignore this email.</p>
+```
+
+```html
+<!-- Reset password -->
+<h2>Choose a new password</h2>
+<p>Enter this code in the app:</p>
+<p style="font-size:28px;font-weight:700;letter-spacing:8px;font-family:ui-monospace,Menlo,monospace;margin:20px 0">{{ .Token }}</p>
+<p>Or open this link to set a new password:</p>
+<p><a href="https://chordplane.citcs.site/auth/confirm?token_hash={{ .TokenHash }}&type=recovery">Reset my password</a></p>
+<p style="color:#666;font-size:13px">The code and link expire in one hour. If you did not ask for this, ignore this email.</p>
+```
+
+The `token_hash` link is signed and single-use, so it works without the PKCE
+verifier stored on the requesting device. `{{ .ConfirmationURL }}` is left out
+deliberately: it points back through the same-device flow and, if kept, competes
+with the code for the user's attention. Keep the OTP length at the default of six
+digits — the code field only accepts six.
+
+### Password attempts
+
+Two limits apply to email + password:
+
+- **On this device** (`lib/features/sharing/cloud/auth_throttle.dart`) — the
+  first three wrong passwords are free, then the Wait grows from 5 seconds to
+  15 minutes, persisted per address. The Sign in button is disabled during the
+  wait and the sheet explains it; “Forgot password?” stays available.
+- **On the server** — Supabase Auth rate-limits `/token` per IP (roughly 30
+  requests / 5 minutes) and applies 60-second windows per address for sign-up and
+  recovery emails. The app mirrors a 429 as a one-minute local wait.
+
+Per-account lockout on Supabase's side needs the `password_verification_attempt`
+hook, which is a Teams/Enterprise feature. If that becomes necessary, the free
+alternative is Cloudflare Turnstile: GoTrue skips CAPTCHA for the `pkce`,
+`refresh_token` and `id_token` grants, so Google sign-in, link exchange and
+session refresh would keep working while password, sign-up and recovery requests
+are challenged.
 
 ### Building with Google
 

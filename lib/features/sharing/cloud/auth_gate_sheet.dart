@@ -4,9 +4,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/auth/auth_gateway.dart';
 import '../../../core/auth/google_auth.dart';
 import '../../../core/config/app_config.dart';
 import 'auth_api.dart';
+import 'auth_throttle.dart';
 import 'auth_widgets.dart';
 import 'password_reset.dart';
 
@@ -50,7 +52,18 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
   /// sheet can offer a code field and a resend action for that address.
   String? _confirmationEmail;
 
+  /// When set, the app is making the person wait before another password
+  /// attempt. See [AuthThrottle].
+  DateTime? _lockedUntil;
+
+  /// Guards against popping the sheet twice: a confirmation link can sign the
+  /// member in while the success path is still finishing.
+  bool _closing = false;
+
   SignInApi get _api => ref.read(signInApiProvider);
+
+  bool get _isLocked =>
+      _lockedUntil != null && _lockedUntil!.isAfter(DateTime.now());
 
   @override
   void dispose() {
@@ -64,6 +77,12 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final showGoogle = ref.watch(googleSignInEnabledProvider);
+    // A confirmation link or a code can sign the member in while this sheet is
+    // still on screen. Close it then: leaving "Confirm your email" up after
+    // auth already succeeded is the confusing part.
+    ref.listen(signedInProvider, (previous, next) {
+      if (next.value == true) _close();
+    });
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -133,40 +152,51 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
             ),
           ] else
             const SizedBox(height: 16),
-          AutofillGroup(
-            child: Column(
-              children: [
-                TextField(
-                  controller: _email,
-                  enabled: !_busy,
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: const Icon(Icons.alternate_email, size: 20),
-                    errorText: _emailError,
+          if (_confirmationEmail == null) ...[
+            AutofillGroup(
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _email,
+                    enabled: !_busy,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    textInputAction: TextInputAction.next,
+                    // A lockout belongs to one address. Give a different
+                    // account on the same device its own fresh budget; the
+                    // submit path re-checks the real state for whatever email
+                    // is entered.
+                    onChanged: (_) {
+                      if (_lockedUntil != null) {
+                        setState(() => _lockedUntil = null);
+                      }
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: const Icon(Icons.alternate_email, size: 20),
+                      errorText: _emailError,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                PasswordField(
-                  controller: _password,
-                  label: 'Password',
-                  isNewPassword: _createAccount,
-                  enabled: !_busy,
-                  errorText: _passwordError,
-                  onSubmitted: _submit,
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  PasswordField(
+                    controller: _password,
+                    label: 'Password',
+                    isNewPassword: _createAccount,
+                    enabled: !_busy,
+                    errorText: _passwordError,
+                    onSubmitted: _submit,
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (_createAccount) ...[
-            const SizedBox(height: 8),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _password,
-              builder: (context, value, _) =>
-                  PasswordStrength(password: value.text),
-            ),
+            if (_createAccount) ...[
+              const SizedBox(height: 8),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _password,
+                builder: (context, value, _) =>
+                    PasswordStrength(password: value.text),
+              ),
+            ],
           ],
           if (_message != null) ...[
             const SizedBox(height: 10),
@@ -217,7 +247,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _busy ? null : _submit,
+                onPressed: _busy || _isLocked ? null : _submit,
                 child: _busy
                     ? const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -230,6 +260,13 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
                     : Text(_createAccount ? 'Create account' : 'Sign in'),
               ),
             ),
+            if (_lockedUntil != null)
+              RetryCountdown(
+                until: _lockedUntil!,
+                onExpired: () {
+                  if (mounted) setState(() => _lockedUntil = null);
+                },
+              ),
           ],
           if (_confirmationEmail == null) ...[
             TextButton(
@@ -285,7 +322,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
     try {
       final result = await ref.read(googleAuthProvider).signIn();
       await authCall(() => _api.signInWithGoogle(result.idToken));
-      if (mounted) Navigator.of(context).pop();
+      _close();
     } on GoogleAuthException catch (error) {
       if (!error.canceled && mounted) _show(error.message);
     } on AuthException catch (error) {
@@ -322,6 +359,19 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
       _show(AppConfig.supabaseInitError!);
       return;
     }
+    // Read before any await so this still works if the sheet is dismissed.
+    final throttle = ref.read(authThrottleProvider);
+    if (!_createAccount) {
+      final lockout = await throttle.load(email);
+      if (!mounted) return;
+      if (lockout.isLocked) {
+        setState(() {
+          _lockedUntil = lockout.lockedUntil;
+          _message = null;
+        });
+        return;
+      }
+    }
     setState(() {
       _busy = true;
       _message = null;
@@ -337,35 +387,56 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
           _showConfirmation(email);
           return;
         }
-        Navigator.of(context).pop();
+        await throttle.recordSuccess(email);
+        _close();
         return;
       }
       await authCall(() => _api.signIn(email, password));
-      if (mounted) Navigator.of(context).pop();
+      await throttle.recordSuccess(email);
+      _close();
     } on AuthException catch (error) {
       debugPrint('Auth failed: ${error.message}');
       final failure = describeAuthFailure(error);
-      if (mounted) {
-        if (_createAccount &&
-            failure.kind == AuthFailureKind.emailAlreadyRegistered) {
-          // Neutral on purpose: the sheet should not confirm whether an
-          // address already has an account. Offer the resend action in case
-          // the account is real but still unconfirmed.
-          _showConfirmation(
+      if (!_createAccount) {
+        // Only password attempts count against the throttle. "Email not
+        // confirmed" and provider errors are not guesses at the password.
+        if (failure.kind == AuthFailureKind.invalidCredentials) {
+          final lockout = await throttle.recordFailure(email);
+          if (mounted) {
+            setState(() {
+              _lockedUntil = lockout.isLocked ? lockout.lockedUntil : null;
+            });
+          }
+        } else if (failure.kind == AuthFailureKind.tooManyRequests) {
+          // The server is already refusing; mirror its window locally so the
+          // button stops offering attempts that cannot succeed.
+          final lockout = await throttle.recordFailure(
             email,
-            message:
-                'If that email is new, check your inbox to confirm it. If it '
-                'already has an account, sign in instead.',
+            penalty: const Duration(minutes: 1),
           );
-          return;
+          if (mounted) setState(() => _lockedUntil = lockout.lockedUntil);
         }
-        if (!_createAccount &&
-            failure.kind == AuthFailureKind.emailNotConfirmed) {
-          _showConfirmation(email, message: failure.message);
-          return;
-        }
-        _show(failure.message);
       }
+      if (!mounted) return;
+      if (_createAccount &&
+          failure.kind == AuthFailureKind.emailAlreadyRegistered) {
+        // Neutral on purpose: the sheet should not confirm whether an
+        // address already has an account. Offer the resend action in case
+        // the account is real but still unconfirmed.
+        _showConfirmation(
+          email,
+          message:
+              'If that email is new, check your inbox to confirm it. If it '
+              'already has an account, sign in instead.',
+        );
+        return;
+      }
+      if (!_createAccount &&
+          failure.kind == AuthFailureKind.emailNotConfirmed) {
+        _showConfirmation(email, message: failure.message);
+        return;
+      }
+      _show(failure.message);
     } catch (error) {
       // Anything else (offline, DNS, hanging connection, uninitialized
       // client) must still surface — silent failure looks like a hang.
@@ -376,12 +447,21 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
     }
   }
 
+  /// Pops the sheet exactly once, whether the pop comes from our own success
+  /// path or from a deep link that signed the member in while it was open.
+  void _close() {
+    if (!mounted || _closing) return;
+    _closing = true;
+    Navigator.of(context).pop();
+  }
+
   void _showConfirmation(String email, {String? message}) {
     setState(() {
       _confirmationEmail = email;
       _codeError = null;
       _code.clear();
-      _message = message ?? 'Check your inbox — confirm your email, then sign in.';
+      _message =
+          message ?? 'Check your inbox — confirm your email, then sign in.';
       _messageIsError = false;
     });
   }
@@ -410,14 +490,15 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
           type: OtpType.signup,
         ),
       );
-      if (mounted) Navigator.of(context).pop();
+      _close();
     } on AuthException catch (error) {
       debugPrint('Confirmation code failed: ${error.message}');
       if (!mounted) return;
       final failure = describeAuthFailure(error);
       if (failure.kind == AuthFailureKind.expiredToken) {
         setState(() {
-          _codeError = 'That code is not right or has expired. Resend the '
+          _codeError =
+              'That code is not right or has expired. Resend the '
               'email and use the newest code.';
         });
       } else {
