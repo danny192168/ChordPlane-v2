@@ -1,0 +1,19 @@
+---
+interface Props {
+  caption?: string;
+  class?: string;
+  /** Narrow the frame for gallery strips. */
+  size?: 'default' | 'small';
+}
+
+const { caption, class: className, size = 'default' } = Astro.props;
+---
+
+<figure class:list={['phone', `phone--${size}`, className]}>
+  <div class="phone-shell">
+    <div class="phone-screen">
+      <slot />
+    </div>
+  </div>
+  {caption && <figcaption class="phone-caption">{caption}</figcaption>}
+</figure>

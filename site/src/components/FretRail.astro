@@ -1,0 +1,41 @@
+---
+// A fretboard rail: six strings, a few fret wires, and the chords of a
+// I–V–vi–IV in G. Decorative only — the labels are for the eye, not the
+// screen reader.
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+const strings = [30, 66, 102, 138, 174, 210];
+const frets = [72, 176, 280, 384, 488, 592, 696];
+const dots = [
+  { x: 124, y: 66, label: 'G' },
+  { x: 328, y: 138, label: 'C' },
+  { x: 532, y: 66, label: 'D' },
+  { x: 736, y: 138, label: 'Em' },
+];
+---
+
+<svg
+  class:list={['fret-rail', className]}
+  viewBox="0 0 840 240"
+  preserveAspectRatio="none"
+  aria-hidden="true"
+  focusable="false"
+>
+  <g class="fret-rail-strings">
+    {strings.map((y) => <line x1="0" y1={y} x2="840" y2={y} />)}
+  </g>
+  <g class="fret-rail-wires">
+    {frets.map((x) => <line x1={x} y1="16" x2={x} y2="224" />)}
+  </g>
+  <g class="fret-rail-dots">
+    {dots.map((dot) => (
+      <g>
+        <circle cx={dot.x} cy={dot.y} r="17" />
+        <text x={dot.x} y={dot.y + 5}>{dot.label}</text>
+      </g>
+    ))}
+  </g>
+</svg>

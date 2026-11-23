@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/chords/chord_detection.dart';
 import '../../../core/chords/chord_document.dart';
+import '../../../core/demo/demo_songs.dart';
 import '../../../core/settings/settings.dart';
 import '../../../core/db/app_database.dart';
+import '../../setlists/data/setlist_repository.dart';
 import 'song_repository.dart';
 
 enum LibraryFilter { artists, favorites }
@@ -63,12 +65,39 @@ final searchResultsProvider = StreamProvider<List<SongListItem>>((ref) {
 });
 
 /// One launch-time seed so a fresh install has material to explore.
+///
+/// Songs come first, then a set list built from them, so a new install opens
+/// onto a library that looks like somebody already uses it. The
+/// `demo.seeded` flag still guards existing libraries: nothing is added twice.
 final demoSeedProvider = FutureProvider<void>((ref) async {
   final prefs = ref.watch(sharedPreferencesProvider);
   if (prefs.getBool('demo.seeded') == true) return;
-  await ref.read(songRepositoryProvider).seedDemoSongs();
+  final songs = ref.read(songRepositoryProvider);
+  await songs.seedDemoSongs();
+  await _seedDemoSetlist(ref, songs);
   await prefs.setBool('demo.seeded', true);
 });
+
+/// Creates [demoSetlist] once, if its songs made it into the library and no
+/// set list with that title exists yet. A failure here must not keep the app
+/// from starting, so missing songs simply shorten the list.
+Future<void> _seedDemoSetlist(Ref ref, SongRepository songs) async {
+  final setlists = ref.read(setlistRepositoryProvider);
+  if (await setlists.hasTitled(demoSetlist.title)) return;
+  final songIds = <String>[];
+  for (final title in demoSetlist.songTitles) {
+    final song = await songs.findMatching(title: title, artist: 'Traditional');
+    if (song != null) songIds.add(song.id);
+  }
+  if (songIds.isEmpty) return;
+  final id = await setlists.create(
+    title: demoSetlist.title,
+    description: demoSetlist.description,
+  );
+  for (final songId in songIds) {
+    await setlists.addSong(id, songId);
+  }
+}
 
 typedef ChordViewKey = ({
   String body,

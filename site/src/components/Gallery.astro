@@ -1,0 +1,63 @@
+---
+import PhoneFrame from './PhoneFrame.astro';
+import Screenshot from './Screenshot.astro';
+
+import artists from '../assets/screenshots/artists.png';
+import setlists from '../assets/screenshots/setlists.png';
+import diagrams from '../assets/screenshots/diagrams.png';
+import transpose from '../assets/screenshots/transpose.png';
+
+const shots = [
+  {
+    image: artists,
+    title: 'Seven songs, one artist',
+    body: 'The whole library arrives with a real artist page, keys included.',
+    alt: 'The Traditional artist page listing seven songs with their keys.',
+  },
+  {
+    image: setlists,
+    title: 'Sunday Set',
+    body: 'A set list is just songs in the order you will play them.',
+    alt: 'The set lists screen with the Sunday Set card showing four songs.',
+  },
+  {
+    image: diagrams,
+    title: 'Every voicing',
+    body: 'Four positions for each chord, drawn offline on the phone.',
+    alt: 'Chord diagrams for G, G7 and C with several voicings each.',
+  },
+  {
+    image: transpose,
+    title: 'Up a semitone',
+    body: 'Move a whole song and leave the lyric line where it was.',
+    alt: 'The transpose sheet set to one semitone above the original key.',
+  },
+];
+---
+
+<section class="section wrap gallery-section" aria-labelledby="gallery-title">
+  <div class="section-head gallery-head">
+    <div>
+      <span class="eyebrow">The real thing</span>
+      <h2 id="gallery-title">Screens from the app, not a mockup.</h2>
+    </div>
+    <p class="gallery-hint" aria-hidden="true">Drag or swipe →</p>
+  </div>
+
+  <ul class="gallery">
+    {shots.map((shot) => (
+      <li class="gallery-item">
+        <PhoneFrame size="small">
+          <Screenshot
+            src={shot.image}
+            alt={shot.alt}
+            sizes="(min-width: 900px) 280px, 62vw"
+            widths={[320, 480, 640]}
+          />
+        </PhoneFrame>
+        <h3>{shot.title}</h3>
+        <p>{shot.body}</p>
+      </li>
+    ))}
+  </ul>
+</section>

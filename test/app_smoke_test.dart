@@ -126,10 +126,10 @@ void main() {
     await tester.pumpWidget(wrapRouted());
     await pumpUntil(tester, find.text('Traditional'));
 
-    // The default view surfaces songs through their artists. All three
-    // demo songs share one artist.
+    // The default view surfaces songs through their artists. Every demo song
+    // shares one artist, so the artist tile summarizes the whole seed.
     expect(find.text('Traditional'), findsOneWidget);
-    expect(find.text('3 songs'), findsOneWidget);
+    expect(find.text('7 songs'), findsOneWidget);
 
     // Open the artist and heart the first song.
     await tester.tap(find.text('Traditional'));

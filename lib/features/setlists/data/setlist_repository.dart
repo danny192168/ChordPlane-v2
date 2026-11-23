@@ -83,6 +83,16 @@ class SetlistRepository {
     )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
+  /// Whether a live set list with this exact title exists. Used by the demo
+  /// seed so a partially completed first run cannot add a second copy.
+  Future<bool> hasTitled(String title) async {
+    final row = await (db.select(db.setlists)..where(
+          (t) => t.deletedAt.isNull() & t.title.equals(title),
+        ))
+        .getSingleOrNull();
+    return row != null;
+  }
+
   /// One-off read used by the share/export path.
   Future<List<SetlistEntry>> getEntries(String setlistId) =>
       _getEntries(setlistId);

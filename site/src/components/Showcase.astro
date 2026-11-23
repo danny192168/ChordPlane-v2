@@ -1,0 +1,129 @@
+---
+import PhoneFrame from './PhoneFrame.astro';
+import Screenshot from './Screenshot.astro';
+
+import viewer from '../assets/screenshots/song-viewer.png';
+import transpose from '../assets/screenshots/transpose.png';
+import diagrams from '../assets/screenshots/diagrams.png';
+import setlist from '../assets/screenshots/setlist-detail.png';
+
+const steps = [
+  {
+    title: 'Chords, exactly where they land',
+    body: 'ChordPro brackets, plain-text chord rows, or a sheet pasted from anywhere. The chord sits above the syllable you play it on, so the page reads like a lead sheet instead of a wall of brackets.',
+    label: 'Sheet',
+    image: viewer,
+    alt: 'Amazing Grace open in ChordPlane, with G, G7, C and D sitting above the lyric lines.',
+  },
+  {
+    title: 'Change key, not the sheet',
+    body: 'Nudge the whole song from −11 to +11 semitones. Every chord, every diagram and the capo hint move together, and the sheet stays as legible as it was in the original key.',
+    label: 'Transpose',
+    image: transpose,
+    alt: 'The transpose sheet showing the song moved up one semitone to A♭.',
+  },
+  {
+    title: 'See the shape before you play it',
+    body: 'Tap any chord for guitar or ukulele voicings, or open every chord in the song at once. Each diagram is drawn as you read, so it works offline and at any text size.',
+    label: 'Diagrams',
+    image: diagrams,
+    alt: 'The chord sheet for Amazing Grace showing four voicings each for G and G7.',
+  },
+  {
+    title: 'A running order you can trust',
+    body: 'Group songs into a set list, drag them into the order you will play them, and open the next song with one tap. The list never needs a connection.',
+    label: 'Set lists',
+    image: setlist,
+    alt: 'The Sunday Set set list with four numbered songs and their keys.',
+  },
+];
+---
+
+<section class="section showcase" id="inside" aria-labelledby="inside-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Built for playing</span>
+      <h2 id="inside-title">Four things a paper sheet can’t do.</h2>
+      <p>
+        The tools stay folded away until you reach for them. What is left on
+        screen is the song, sized for a music stand and readable under stage
+        lights.
+      </p>
+    </div>
+
+    <div class="showcase-grid">
+      <div class="showcase-stage" aria-hidden="true">
+        {steps.map((step, index) => (
+          <div class:list={['showcase-shot', { 'is-active': index === 0 }]}>
+            <PhoneFrame>
+              <Screenshot
+                src={step.image}
+                alt={step.alt}
+                eager={index === 0}
+                sizes="(min-width: 900px) 360px, 60vw"
+              />
+            </PhoneFrame>
+          </div>
+        ))}
+      </div>
+
+      <ol class="showcase-list">
+        {steps.map((step, index) => (
+          <li data-shot={index}>
+            <span class="showcase-index">{String(index + 1).padStart(2, '0')}</span>
+            <div>
+              <span class="showcase-label">{step.label}</span>
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+            </div>
+            <div class="showcase-inline">
+              <PhoneFrame>
+                <Screenshot
+                  src={step.image}
+                  alt={step.alt}
+                  sizes="(min-width: 900px) 0px, 68vw"
+                  widths={[320, 480, 640]}
+                />
+              </PhoneFrame>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Swap the sticky phone as each feature passes the middle of the viewport.
+  // Without JavaScript the first frame simply stays put, which is a fine
+  // static page; everything the section says is in the text.
+  const list = document.querySelector<HTMLElement>('.showcase-list');
+  const shots = Array.from(
+    document.querySelectorAll<HTMLElement>('.showcase-shot'),
+  );
+
+  if (list && shots.length && 'IntersectionObserver' in window) {
+    const items = Array.from(list.querySelectorAll<HTMLElement>('[data-shot]'));
+    let current = 0;
+
+    const show = (index: number) => {
+      if (index === current) return;
+      current = index;
+      shots.forEach((shot, i) => shot.classList.toggle('is-active', i === index));
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const closest = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!closest) return;
+        const index = items.indexOf(closest.target as HTMLElement);
+        if (index >= 0) show(index);
+      },
+      { rootMargin: '-42% 0px -42% 0px', threshold: [0, 0.25, 0.6] },
+    );
+
+    items.forEach((item) => observer.observe(item));
+  }
+</script>
