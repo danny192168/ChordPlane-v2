@@ -1,0 +1,172 @@
+---
+// Share card for link previews. Rendered at exactly 1200x630 by
+// scripts/generate-assets.mjs, which screenshots this route after a build.
+// Deliberately standalone: no site header or footer in the frame.
+import viewer from '../assets/screenshots/song-viewer.png';
+const shot = viewer.src;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <title>ChordPlane share card</title>
+    <style>
+      @font-face {
+        font-family: 'Satoshi';
+        src: url('/fonts/satoshi-900.woff2') format('woff2');
+        font-weight: 900;
+        font-display: block;
+      }
+
+      @font-face {
+        font-family: 'Satoshi';
+        src: url('/fonts/satoshi-700.woff2') format('woff2');
+        font-weight: 700;
+        font-display: block;
+      }
+
+      @font-face {
+        font-family: 'Poppins';
+        src: url('/fonts/poppins-500.woff2') format('woff2');
+        font-weight: 500;
+        font-display: block;
+      }
+
+      @font-face {
+        font-family: 'Poppins';
+        src: url('/fonts/poppins-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: block;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: #080a10;
+        color: #eef3f5;
+        font-family: 'Poppins', sans-serif;
+      }
+
+      .card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        align-items: center;
+        gap: 40px;
+        width: 1200px;
+        height: 630px;
+        padding: 64px 72px;
+        border: 1px solid rgba(238, 243, 245, 0.12);
+      }
+
+      .rule {
+        width: 56px;
+        height: 3px;
+        background: #2bafab;
+        margin-bottom: 28px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 34px;
+      }
+
+      .brand img {
+        width: 64px;
+        height: 64px;
+      }
+
+      .brand span {
+        font-family: 'Satoshi', sans-serif;
+        font-weight: 700;
+        font-size: 30px;
+        letter-spacing: -0.02em;
+      }
+
+      h1 {
+        margin: 0 0 22px;
+        font-family: 'Satoshi', sans-serif;
+        font-weight: 900;
+        font-size: 62px;
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+      }
+
+      h1 em {
+        font-style: normal;
+        color: #5dd3cf;
+      }
+
+      p {
+        margin: 0;
+        max-width: 30ch;
+        font-size: 23px;
+        line-height: 1.45;
+        color: #a3adb4;
+      }
+
+      .url {
+        position: absolute;
+        left: 72px;
+        bottom: 44px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 19px;
+        letter-spacing: 0.01em;
+        color: #2bafab;
+      }
+
+      .phone {
+        width: 330px;
+        height: 100%;
+        max-height: 560px;
+        margin-inline: auto;
+        padding: 8px;
+        border-radius: 40px;
+        border: 1px solid rgba(238, 243, 245, 0.18);
+        background: #101519;
+        box-shadow: 0 40px 80px -40px #000;
+      }
+
+      .phone img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 32px;
+        object-fit: cover;
+        object-position: top center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div>
+        <div class="brand">
+          <img src="/logo.svg" alt="" width="64" height="64" />
+          <span>ChordPlane</span>
+        </div>
+        <div class="rule"></div>
+        <h1>Chords above the <em>words</em>.</h1>
+        <p>
+          A guitar-first songbook that transposes, draws the voicing, and keeps
+          your library on the device.
+        </p>
+      </div>
+      <div class="phone">
+        <img src={shot} alt="" width="314" height="544" />
+      </div>
+      <span class="url">chordplane.citcs.site</span>
+    </div>
+  </body>
+</html>

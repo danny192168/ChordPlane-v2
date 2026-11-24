@@ -28,8 +28,8 @@ const ogImage = new URL('/og.png', Astro.site).href;
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex" />}
 
-    <meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0d141c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0f12" media="(prefers-color-scheme: dark)" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="ChordPlane" />
@@ -52,14 +52,14 @@ const ogImage = new URL('/og.png', Astro.site).href;
 
     <link
       rel="preload"
-      href="/fonts/fraunces-latin.woff2"
+      href="/fonts/satoshi-700.woff2"
       as="font"
       type="font/woff2"
       crossorigin
     />
     <link
       rel="preload"
-      href="/fonts/space-grotesk-latin.woff2"
+      href="/fonts/poppins-400.woff2"
       as="font"
       type="font/woff2"
       crossorigin
@@ -67,7 +67,7 @@ const ogImage = new URL('/og.png', Astro.site).href;
 
     <script is:inline>
       // Apply a saved theme before the first paint, so the page never flashes
-      // the wrong palette. "system" (no attribute) follows prefers-color-scheme.
+      // the wrong palette. No attribute means "follow the system".
       try {
         const saved = localStorage.getItem('chordplane-theme');
         if (saved === 'light' || saved === 'dark') {

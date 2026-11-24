@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import ReleaseInfo from '../components/ReleaseInfo.astro';
+import ShotStrip from '../components/ShotStrip.astro';
 ---
 
 <Base
@@ -8,18 +9,39 @@ import ReleaseInfo from '../components/ReleaseInfo.astro';
   description="Download the signed ChordPlane APK. Android 7.0 or newer, free, and updates install over the old build without touching your songs."
 >
   <section class="wrap page-head">
-    <span class="eyebrow">Download</span>
     <h1>Get ChordPlane for Android</h1>
     <p>
       A signed APK, published straight from the project's releases. No account,
       no installer, no bundled extras — download it, tap it, play.
     </p>
+    <div class="actions">
+      <a
+        id="download-apk"
+        class="btn btn-primary"
+        href="https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk"
+        rel="noopener"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+          <path
+            d="M12 3v11m0 0 4.5-4.5M12 14 7.5 9.5M5 17.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+        Download APK
+      </a>
+    </div>
+    <ReleaseInfo />
   </section>
 
-  <section class="wrap install-grid" aria-labelledby="install-title">
+  <ShotStrip />
+
+  <section class="section wrap install-grid" aria-labelledby="install-title">
     <div>
       <h2 id="install-title">Three steps</h2>
-      <ol class="steps">
+      <ol class="steps" style="margin-top: 22px">
         <li>
           <strong>Download the APK.</strong> It lands in your browser's
           downloads, like any other file.
@@ -42,27 +64,7 @@ import ReleaseInfo from '../components/ReleaseInfo.astro';
     </div>
 
     <div class="download-card">
-      <a
-        id="download-apk"
-        class="btn btn-primary"
-        href="https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk"
-        rel="noopener"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
-          <path
-            d="M12 3v11m0 0 4.5-4.5M12 14 7.5 9.5M5 17.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1.5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"></path>
-        </svg>
-        Download APK
-      </a>
-
-      <ReleaseInfo />
-
-      <dl class="spec">
+      <dl class="spec" style="margin-top: 0">
         <dt>Platform</dt>
         <dd>Android 7.0+</dd>
         <dt>Price</dt>
@@ -72,13 +74,18 @@ import ReleaseInfo from '../components/ReleaseInfo.astro';
         <dt>Your songs</dt>
         <dd>Stay on the device</dd>
       </dl>
+      <a
+        class="btn btn-primary"
+        style="margin-top: 20px"
+        href="https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk"
+        rel="noopener">Download APK</a
+      >
     </div>
   </section>
 
   <section class="section wrap" aria-labelledby="questions-title">
     <div class="section-head">
-      <span class="eyebrow">Before you install</span>
-      <h2 id="questions-title">The questions people actually ask.</h2>
+      <h2 id="questions-title">Before you install</h2>
     </div>
 
     <ul class="points">

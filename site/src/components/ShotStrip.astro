@@ -1,0 +1,83 @@
+---
+import PhoneFrame from './PhoneFrame.astro';
+import Screenshot from './Screenshot.astro';
+
+import viewer from '../assets/screenshots/song-viewer.png';
+import transpose from '../assets/screenshots/transpose.png';
+import diagrams from '../assets/screenshots/diagrams.png';
+import setlist from '../assets/screenshots/setlist-detail.png';
+import artists from '../assets/screenshots/artists.png';
+
+const shots = [
+  { image: viewer, caption: 'Chords sit above the syllable you play them on.' },
+  { image: transpose, caption: 'Move a song into any key, capo hint included.' },
+  { image: diagrams, caption: 'Guitar and ukulele voicings, drawn on the device.' },
+  { image: setlist, caption: 'Set lists keep the running order for the night.' },
+  { image: artists, caption: 'Artists group the library without folders.' },
+];
+---
+
+<section class="section wrap" aria-labelledby="shots-title">
+  <div class="strip-head">
+    <div>
+      <h2 id="shots-title">A look at the app</h2>
+      <p class="fine-print" style="margin-top: 8px">
+        Every screen below is a real capture from the Android build.
+      </p>
+    </div>
+    <div class="strip-nav">
+      <button type="button" data-strip="prev" aria-label="Previous screenshots">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m14 6-6 6 6 6"></path>
+        </svg>
+      </button>
+      <button type="button" data-strip="next" aria-label="Next screenshots">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m10 6 6 6-6 6"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <ul class="shot-strip" data-strip-track>
+    {shots.map((shot) => (
+      <li>
+        <figure class="shot-item">
+          <PhoneFrame size="small">
+            <Screenshot
+              src={shot.image}
+              alt=""
+              sizes="(min-width: 900px) 264px, 62vw"
+              widths={[264, 400, 528]}
+            />
+          </PhoneFrame>
+          <figcaption>{shot.caption}</figcaption>
+        </figure>
+      </li>
+    ))}
+  </ul>
+</section>
+
+<script>
+  const track = document.querySelector<HTMLElement>('[data-strip-track]');
+  const prev = document.querySelector<HTMLButtonElement>('[data-strip="prev"]');
+  const next = document.querySelector<HTMLButtonElement>('[data-strip="next"]');
+
+  if (track && prev && next) {
+    const step = () => Math.max(260, track.clientWidth * 0.7);
+    const sync = () => {
+      prev.disabled = track.scrollLeft < 8;
+      next.disabled = track.scrollLeft + track.clientWidth > track.scrollWidth - 8;
+    };
+
+    prev.addEventListener('click', () =>
+      track.scrollBy({ left: -step(), behavior: 'smooth' }),
+    );
+    next.addEventListener('click', () =>
+      track.scrollBy({ left: step(), behavior: 'smooth' }),
+    );
+    track.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    sync();
+  }
+</script>

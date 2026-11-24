@@ -5,7 +5,7 @@ const path = Astro.url.pathname;
 <header class="site-header">
   <div class="wrap header-inner">
     <a class="brand" href="/" aria-label="ChordPlane home">
-      <img src="/logo.svg" alt="" width="32" height="32" />
+      <img src="/logo.svg" alt="" width="28" height="28" />
       <span>ChordPlane</span>
     </a>
     <nav class="site-nav" aria-label="Site">
@@ -27,29 +27,24 @@ const path = Astro.url.pathname;
         Download
       </a>
       <button
-        class="theme-toggle"
+        class="theme-switch"
         type="button"
+        role="switch"
+        aria-checked="false"
+        aria-label="Dark theme"
         data-theme-toggle
-        aria-label="Switch colour theme"
-        title="Switch colour theme"
       >
-        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true" width="17" height="17">
-          <path
-            d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.66-5.66 1.41-1.41M4.93 19.07l1.41-1.41m11.32 0 1.41 1.41M4.93 4.93l1.41 1.41"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"></path>
-          <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
-        </svg>
-        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true" width="17" height="17">
-          <path
-            d="M20.5 14.2A8.4 8.4 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linejoin="round"></path>
-        </svg>
+        <span class="switch-track">
+          <span class="switch-knob">
+            <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"></path>
+            </svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+              <path d="M20.5 14.2A8.4 8.4 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"></path>
+            </svg>
+          </span>
+        </span>
       </button>
     </nav>
   </div>
@@ -69,10 +64,10 @@ const path = Astro.url.pathname;
 
   const paint = () => {
     if (!button) return;
-    const next = resolved() === 'dark' ? 'light' : 'dark';
-    button.dataset.mode = resolved();
-    button.setAttribute('aria-label', `Switch to ${next} theme`);
-    button.setAttribute('title', `Switch to ${next} theme`);
+    const mode = resolved();
+    button.dataset.mode = mode;
+    button.setAttribute('aria-checked', String(mode === 'dark'));
+    button.setAttribute('aria-label', mode === 'dark' ? 'Light theme' : 'Dark theme');
   };
 
   button?.addEventListener('click', () => {
@@ -81,7 +76,7 @@ const path = Astro.url.pathname;
     try {
       localStorage.setItem('chordplane-theme', next);
     } catch (_) {
-      /* Storage is optional; the toggle still works for this page. */
+      /* Storage is optional; the switch still works for this page. */
     }
     paint();
   });

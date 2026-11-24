@@ -1,0 +1,95 @@
+---
+import Screenshot from './Screenshot.astro';
+
+import viewer from '../assets/screenshots/song-viewer.png';
+import diagrams from '../assets/screenshots/diagrams.png';
+import setlist from '../assets/screenshots/setlist-detail.png';
+import artists from '../assets/screenshots/artists.png';
+import setlists from '../assets/screenshots/setlists.png';
+
+// Same five shots feed the desktop fan and the mobile hero/thumbnail pair.
+// The transpose sheet sits out the fan because its dimmed scrim reads as a
+// disabled screen; it appears in the download strip where it has a caption.
+// Images are decorative here: the section is labelled, and every screen is
+// described further down the page.
+const shots = [viewer, diagrams, setlist, artists, setlists];
+---
+
+<section class="showcase-band" id="screens" aria-label="Screenshots of the ChordPlane app">
+  <div class="showcase-inner">
+    <div class="fan">
+      {shots.map((image, index) => (
+        <div class="fan-item">
+          <div class="fan-frame">
+            <Screenshot
+              src={image}
+              alt=""
+              sizes="(min-width: 900px) 182px, 1px"
+              widths={[240, 360, 480]}
+              eager={index === 2}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="showcase-mobile">
+      <div class="mobile-hero">
+        {shots.map((image, index) => (
+          <Screenshot
+            class={`hero-shot${index === 0 ? ' is-active' : ''}`}
+            src={image}
+            alt=""
+            sizes="(min-width: 900px) 1px, 74vw"
+            widths={[320, 480, 640]}
+            eager={index === 0}
+          />
+        ))}
+      </div>
+
+      <div class="thumbs" role="tablist" aria-label="Choose a screenshot">
+        {shots.map((image, index) => (
+          <button
+            class="thumb"
+            type="button"
+            role="tab"
+            aria-selected={index === 0 ? 'true' : 'false'}
+            aria-label={`Screenshot ${index + 1} of ${shots.length}`}
+            data-index={index}
+          >
+            <Screenshot src={image} alt="" sizes="54px" widths={[108]} />
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Mobile only: tapping a thumbnail swaps the hero. No autoplay, no timers.
+  const thumbs = Array.from(document.querySelectorAll<HTMLButtonElement>('.thumb'));
+  const heroes = Array.from(
+    document.querySelectorAll<HTMLElement>('.mobile-hero .hero-shot'),
+  );
+
+  if (thumbs.length === heroes.length) {
+    const select = (index: number) => {
+      thumbs.forEach((thumb, i) =>
+        thumb.setAttribute('aria-selected', String(i === index)),
+      );
+      heroes.forEach((hero, i) => hero.classList.toggle('is-active', i === index));
+    };
+
+    thumbs.forEach((thumb, index) => {
+      thumb.addEventListener('click', () => select(index));
+      thumb.addEventListener('keydown', (event) => {
+        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+        if (!step) return;
+        event.preventDefault();
+        const next = (index + step + thumbs.length) % thumbs.length;
+        select(next);
+        thumbs[next].focus();
+      });
+    });
+  }
+</script>

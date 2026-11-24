@@ -9,7 +9,7 @@ import Base from '../../layouts/Base.astro';
 >
   <section class="wrap confirm">
     <div class="confirm-card">
-      <div class="mark" aria-hidden="true">C</div>
+      <img class="mark" src="/logo.svg" alt="" width="46" height="46" />
 
       <div id="status">
         <h1>Opening ChordPlane…</h1>
@@ -57,14 +57,7 @@ import Base from '../../layouts/Base.astro';
     width: 46px;
     height: 46px;
     margin: 0 auto 18px;
-    display: grid;
-    place-items: center;
-    border-radius: 12px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-family: var(--font-serif);
-    font-size: 1.4rem;
-    font-weight: 700;
+    display: block;
   }
 
   h1 {
