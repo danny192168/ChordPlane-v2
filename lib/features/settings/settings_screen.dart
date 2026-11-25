@@ -213,7 +213,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: Icon(Icons.piano_outlined),
                   title: Text('ChordPlane'),
-                  subtitle: Text('Version 1.1.1 · Phase 1 local build'),
+                  subtitle: Text('Version 1.2.0 · local-first songbook'),
                 ),
               ],
             ),
