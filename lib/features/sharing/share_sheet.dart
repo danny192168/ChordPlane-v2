@@ -134,9 +134,7 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withValues(
-                        alpha: 0.4,
-                      ),
+                      color: theme.colorScheme.outlineVariant,
                     ),
                   ),
                   child: QrImageView(
@@ -220,9 +218,7 @@ class _ShareSheetState extends ConsumerState<_ShareSheet> {
                 color: theme.colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.35,
-                  ),
+                  color: theme.colorScheme.outlineVariant,
                 ),
               ),
               child: Text(
@@ -453,7 +449,7 @@ class _ServerLinkCard extends StatelessWidget {
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+              color: theme.colorScheme.outlineVariant,
             ),
           ),
           child: Text(

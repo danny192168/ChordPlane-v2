@@ -361,7 +361,7 @@ class _Card extends StatelessWidget {
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.35),
+          color: scheme.outlineVariant,
         ),
       ),
       child: child,

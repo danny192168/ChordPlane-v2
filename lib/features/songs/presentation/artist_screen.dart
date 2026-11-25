@@ -88,9 +88,7 @@ class ArtistScreen extends ConsumerWidget {
                       height: 1,
                       indent: 72,
                       endIndent: 16,
-                      color: theme.colorScheme.outlineVariant.withValues(
-                        alpha: 0.3,
-                      ),
+                      color: theme.colorScheme.outlineVariant,
                     ),
                     itemBuilder: (context, index) {
                       final item = items[index];

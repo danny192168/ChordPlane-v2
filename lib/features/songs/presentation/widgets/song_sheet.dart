@@ -64,7 +64,7 @@ class SongSheet extends StatelessWidget {
               color: colors.chordSurface.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                color: theme.colorScheme.outlineVariant,
               ),
             ),
             child: SingleChildScrollView(

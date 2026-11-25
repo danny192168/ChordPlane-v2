@@ -349,7 +349,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
         color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          color: theme.colorScheme.outlineVariant,
         ),
       ),
       child: SongSheet(

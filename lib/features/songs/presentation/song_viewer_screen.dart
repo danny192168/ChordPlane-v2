@@ -351,7 +351,7 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
         color: theme.colorScheme.surfaceContainerLow,
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+            color: theme.colorScheme.outlineVariant,
           ),
         ),
       ),
@@ -827,7 +827,7 @@ class _SongHeader extends StatelessWidget {
         const SizedBox(height: 16),
         Divider(
           height: 1,
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          color: theme.colorScheme.outlineVariant,
         ),
       ],
     );
