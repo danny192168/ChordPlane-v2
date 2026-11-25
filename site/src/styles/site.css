@@ -401,6 +401,8 @@ h2 {
 }
 
 .shot-theme-row {
+  display: flex;
+  justify-content: center;
   margin-top: 20px;
 }
 
@@ -611,8 +613,9 @@ html[data-shot-theme='dark'] .shot-layer[data-shot-layer='dark'] {
   }
 }
 
-/* Screenshot theme switch: compact dark pill with an accent-coloured active
-   option. Independent of the page's own light/dark switch in the header. */
+/* Screenshot theme switch: compact pill that follows the site's light/dark
+   palette through tokens. The selected screenshot theme is independent of the
+   site theme set by the header switch. */
 .shot-theme {
   display: inline-flex;
   align-items: center;
@@ -631,9 +634,9 @@ html[data-shot-theme='dark'] .shot-layer[data-shot-layer='dark'] {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  border: 1px solid rgba(238, 243, 245, 0.16);
+  border: 1px solid var(--line-strong);
   border-radius: 11px;
-  background: #101418;
+  background: var(--paper-raised);
 }
 
 .shot-theme-segments button {
@@ -642,7 +645,7 @@ html[data-shot-theme='dark'] .shot-layer[data-shot-layer='dark'] {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #a3adb4;
+  color: var(--ink-soft);
   font: 600 0.78rem/1 var(--font-sans);
   cursor: pointer;
   transition: background-color 180ms ease, color 180ms ease;

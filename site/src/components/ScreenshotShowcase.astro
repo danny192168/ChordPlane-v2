@@ -1,5 +1,6 @@
 ---
 import Screenshot from './Screenshot.astro';
+import ShotThemeSwitch from './ShotThemeSwitch.astro';
 
 import viewer from '../assets/screenshots/song-viewer.png';
 import viewerDark from '../assets/screenshots/song-viewer-dark.png';
@@ -15,8 +16,8 @@ import artists from '../assets/screenshots/artists.png';
 import artistsDark from '../assets/screenshots/artists-dark.png';
 
 // The same six screens feed the fan, the desktop rows and the mobile card
-// strip. Each has a light and dark capture; the preview switch below the
-// Features heading swaps them all at once.
+// strip. Each has a light and dark capture; the preview switch in the section
+// header swaps them all at once.
 const screens = [
   {
     image: viewer,
@@ -92,9 +93,11 @@ const screens = [
       <h2 id="screens-title">Every screen, up close.</h2>
       <p class="screen-lede">
         Real captures from the Android build — what each screen is for, and
-        where you'll use it. Use the preview switch in Features below to see
-        every screen in light or dark.
+        where you'll use it. Switch the previews below between light and dark.
       </p>
+      <div class="shot-theme-row">
+        <ShotThemeSwitch label="" />
+      </div>
     </header>
 
     <div class="screen-rows">

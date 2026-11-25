@@ -14,7 +14,7 @@ const { label = 'Preview', class: className } = Astro.props;
   aria-label="Screenshot theme"
   data-shot-theme-control
 >
-  <span class="shot-theme-label">{label}</span>
+  {label && <span class="shot-theme-label">{label}</span>}
   <div class="shot-theme-segments">
     <button type="button" data-shot-theme-option="dark" aria-pressed="false">
       Dark
