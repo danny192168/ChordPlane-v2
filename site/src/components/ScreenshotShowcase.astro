@@ -2,94 +2,157 @@
 import Screenshot from './Screenshot.astro';
 
 import viewer from '../assets/screenshots/song-viewer.png';
+import transpose from '../assets/screenshots/transpose.png';
 import diagrams from '../assets/screenshots/diagrams.png';
 import setlist from '../assets/screenshots/setlist-detail.png';
 import artists from '../assets/screenshots/artists.png';
-import setlists from '../assets/screenshots/setlists.png';
 
-// Same five shots feed the desktop fan and the mobile hero/thumbnail pair.
-// The transpose sheet sits out the fan because its dimmed scrim reads as a
-// disabled screen; it appears in the download strip where it has a caption.
-// Images are decorative here: the section is labelled, and every screen is
-// described further down the page.
-const shots = [viewer, diagrams, setlist, artists, setlists];
+// The same five screens feed the desktop rows and the mobile card strip.
+// Copy lives here so both layouts stay in step.
+const screens = [
+  {
+    image: viewer,
+    title: 'Chords above the words',
+    body: 'Every chord sits over the syllable you play it on, so the line stays readable while you sing.',
+    alt: 'Song view with chords printed above the lyrics',
+  },
+  {
+    image: transpose,
+    title: 'Any key, capo included',
+    body: 'Shift a song by up to eleven semitones and the chords, capo hint and diagrams move together.',
+    alt: 'Transpose sheet open over a song',
+  },
+  {
+    image: diagrams,
+    title: 'Voicings on the device',
+    body: 'Tap a chord for guitar or ukulele shapes. The diagrams are drawn locally, so they work offline.',
+    alt: 'Chord diagrams listed for a song',
+  },
+  {
+    image: setlist,
+    title: 'A running order for the night',
+    body: 'Group songs into a set, drag them into order, and open the next one with a tap.',
+    alt: 'A set list with songs in running order',
+  },
+  {
+    image: artists,
+    title: 'The library organizes itself',
+    body: 'Artists group songs without folders, and a few letters of a title are enough to find one.',
+    alt: 'Artist page listing the songs by that artist',
+  },
+];
 ---
 
-<section class="showcase-band" id="screens" aria-label="Screenshots of the ChordPlane app">
+<section class="showcase-fan" aria-label="Screenshots of the ChordPlane app">
   <div class="showcase-inner">
-    <div class="fan">
-      {shots.map((image, index) => (
+    <!-- Opening cluster: decorative only, the rows below carry the copy. -->
+    <div class="fan" aria-hidden="true">
+      {screens.map((screen, index) => (
         <div class="fan-item">
           <div class="fan-frame">
             <Screenshot
-              src={image}
+              src={screen.image}
               alt=""
-              sizes="(min-width: 900px) 182px, 1px"
-              widths={[240, 360, 480]}
+              sizes="(min-width: 900px) 180px, 1px"
+              widths={[320, 480, 640]}
               eager={index === 2}
             />
           </div>
         </div>
       ))}
     </div>
+  </div>
+</section>
 
-    <div class="showcase-mobile">
-      <div class="mobile-hero">
-        {shots.map((image, index) => (
-          <Screenshot
-            class={`hero-shot${index === 0 ? ' is-active' : ''}`}
-            src={image}
-            alt=""
-            sizes="(min-width: 900px) 1px, 74vw"
-            widths={[320, 480, 640]}
-            eager={index === 0}
-          />
-        ))}
-      </div>
+<section class="showcase-detail" id="screens" aria-labelledby="screens-title">
+  <div class="showcase-inner">
+    <header class="screen-head">
+      <p class="screen-kicker">The app</p>
+      <h2 id="screens-title">Every screen, up close.</h2>
+      <p class="screen-lede">
+        Real captures from the Android build — what each screen is for, and
+        where you'll use it.
+      </p>
+    </header>
 
-      <div class="thumbs" role="tablist" aria-label="Choose a screenshot">
-        {shots.map((image, index) => (
-          <button
-            class="thumb"
-            type="button"
-            role="tab"
-            aria-selected={index === 0 ? 'true' : 'false'}
-            aria-label={`Screenshot ${index + 1} of ${shots.length}`}
-            data-index={index}
-          >
-            <Screenshot src={image} alt="" sizes="54px" widths={[108]} />
-          </button>
-        ))}
-      </div>
+    <div class="screen-rows">
+      {screens.map((screen) => (
+        <article class="screen-row">
+          <div class="screen-media">
+            <div class="screen-frame">
+              <Screenshot
+                src={screen.image}
+                alt={screen.alt}
+                sizes="(min-width: 900px) 248px, 1px"
+                widths={[320, 480, 640]}
+              />
+            </div>
+          </div>
+          <div class="screen-copy">
+            <h3>{screen.title}</h3>
+            <p>{screen.body}</p>
+          </div>
+        </article>
+      ))}
     </div>
+
+    <ul class="screen-cards" data-screen-cards aria-label="Screenshots of the app">
+      {screens.map((screen, index) => (
+        <li class={`screen-card${index === 0 ? ' is-active' : ''}`} data-screen-card>
+          <div class="screen-frame">
+            <Screenshot
+              src={screen.image}
+              alt={screen.alt}
+              sizes="(min-width: 900px) 1px, 72vw"
+              widths={[320, 480, 640]}
+              eager={index === 0}
+            />
+          </div>
+          <h3>{screen.title}</h3>
+          <p>{screen.body}</p>
+        </li>
+      ))}
+    </ul>
   </div>
 </section>
 
 <script>
-  // Mobile only: tapping a thumbnail swaps the hero. No autoplay, no timers.
-  const thumbs = Array.from(document.querySelectorAll<HTMLButtonElement>('.thumb'));
-  const heroes = Array.from(
-    document.querySelectorAll<HTMLElement>('.mobile-hero .hero-shot'),
-  );
+  // Mobile only: mark the card nearest the centre of the strip. No autoplay.
+  const track = document.querySelector<HTMLElement>('[data-screen-cards]');
 
-  if (thumbs.length === heroes.length) {
-    const select = (index: number) => {
-      thumbs.forEach((thumb, i) =>
-        thumb.setAttribute('aria-selected', String(i === index)),
+  if (track) {
+    const cards = Array.from(track.querySelectorAll<HTMLElement>('[data-screen-card]'));
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      if (!cards.length) return;
+
+      const strip = track.getBoundingClientRect();
+      const middle = strip.left + strip.width / 2;
+      let best = 0;
+      let bestDistance = Infinity;
+
+      cards.forEach((card, index) => {
+        const box = card.getBoundingClientRect();
+        const distance = Math.abs(box.left + box.width / 2 - middle);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = index;
+        }
+      });
+
+      cards.forEach((card, index) =>
+        card.classList.toggle('is-active', index === best),
       );
-      heroes.forEach((hero, i) => hero.classList.toggle('is-active', i === index));
     };
 
-    thumbs.forEach((thumb, index) => {
-      thumb.addEventListener('click', () => select(index));
-      thumb.addEventListener('keydown', (event) => {
-        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-        if (!step) return;
-        event.preventDefault();
-        const next = (index + step + thumbs.length) % thumbs.length;
-        select(next);
-        thumbs[next].focus();
-      });
-    });
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    track.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    update();
   }
 </script>

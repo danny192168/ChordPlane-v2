@@ -22,7 +22,8 @@ const shots = [
     <div>
       <h2 id="shots-title">A look at the app</h2>
       <p class="fine-print" style="margin-top: 8px">
-        Every screen below is a real capture from the Android build.
+        Every screen below is a real capture from the Android build. Tap one to
+        enlarge it.
       </p>
     </div>
     <div class="strip-nav">
@@ -43,14 +44,23 @@ const shots = [
     {shots.map((shot) => (
       <li>
         <figure class="shot-item">
-          <PhoneFrame size="small">
-            <Screenshot
-              src={shot.image}
-              alt=""
-              sizes="(min-width: 900px) 264px, 62vw"
-              widths={[264, 400, 528]}
-            />
-          </PhoneFrame>
+          <button
+            class="shot-zoom"
+            type="button"
+            data-shot-zoom
+            data-full={shot.image.src}
+            data-caption={shot.caption}
+            aria-label={`Enlarge screenshot: ${shot.caption}`}
+          >
+            <PhoneFrame size="small">
+              <Screenshot
+                src={shot.image}
+                alt=""
+                sizes="(min-width: 900px) 264px, 62vw"
+                widths={[264, 400, 528]}
+              />
+            </PhoneFrame>
+          </button>
           <figcaption>{shot.caption}</figcaption>
         </figure>
       </li>
@@ -58,7 +68,77 @@ const shots = [
   </ul>
 </section>
 
+<dialog class="shot-dialog" data-shot-dialog aria-label="Screenshot preview">
+  <img
+    data-shot-dialog-image
+    src={shots[0].image.src}
+    alt=""
+    width="1080"
+    height="2400"
+  />
+  <p class="shot-dialog-caption" data-shot-dialog-caption>{shots[0].caption}</p>
+  <button
+    class="shot-dialog-close"
+    type="button"
+    data-shot-dialog-close
+    aria-label="Close screenshot"
+  >
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M6 6l12 12M18 6 6 18"></path>
+    </svg>
+  </button>
+</dialog>
+
 <script>
+  const dialog = document.querySelector<HTMLDialogElement>('[data-shot-dialog]');
+  const dialogImage = document.querySelector<HTMLImageElement>(
+    '[data-shot-dialog-image]',
+  );
+  const dialogCaption = document.querySelector<HTMLElement>(
+    '[data-shot-dialog-caption]',
+  );
+  const closeButton = document.querySelector<HTMLButtonElement>(
+    '[data-shot-dialog-close]',
+  );
+  const triggers = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-shot-zoom]'),
+  );
+
+  let lastTrigger: HTMLButtonElement | null = null;
+
+  if (dialog && dialogImage && dialogCaption) {
+    triggers.forEach((trigger) => {
+      trigger.addEventListener('click', () => {
+        lastTrigger = trigger;
+        dialogImage.src = trigger.dataset.full ?? '';
+        dialogImage.alt = trigger.dataset.caption ?? '';
+        dialogCaption.textContent = trigger.dataset.caption ?? '';
+        dialog.showModal();
+        document.documentElement.classList.add('lightbox-open');
+      });
+    });
+
+    dialog.addEventListener('close', () => {
+      document.documentElement.classList.remove('lightbox-open');
+      lastTrigger?.focus();
+      lastTrigger = null;
+    });
+
+    // Clicks on the backdrop land on the dialog itself, outside its box.
+    dialog.addEventListener('click', (event) => {
+      const box = dialog.getBoundingClientRect();
+      const inside =
+        event.clientX >= box.left &&
+        event.clientX <= box.right &&
+        event.clientY >= box.top &&
+        event.clientY <= box.bottom;
+      if (!inside) dialog.close();
+    });
+
+    closeButton?.addEventListener('click', () => dialog.close());
+  }
+
+  // Screenshot strip arrows.
   const track = document.querySelector<HTMLElement>('[data-strip-track]');
   const prev = document.querySelector<HTMLButtonElement>('[data-strip="prev"]');
   const next = document.querySelector<HTMLButtonElement>('[data-strip="next"]');
