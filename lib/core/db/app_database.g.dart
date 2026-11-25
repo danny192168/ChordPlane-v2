@@ -169,6 +169,32 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
     requiredDuringInsert: false,
     defaultValue: const Constant('private'),
   );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _anonymousUploadMeta = const VerificationMeta(
+    'anonymousUpload',
+  );
+  @override
+  late final GeneratedColumn<bool> anonymousUpload = GeneratedColumn<bool>(
+    'anonymous_upload',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("anonymous_upload" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -226,6 +252,89 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _originMeta = const VerificationMeta('origin');
+  @override
+  late final GeneratedColumn<String> origin = GeneratedColumn<String>(
+    'origin',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('local'),
+  );
+  static const VerificationMeta _editedLocallyMeta = const VerificationMeta(
+    'editedLocally',
+  );
+  @override
+  late final GeneratedColumn<bool> editedLocally = GeneratedColumn<bool>(
+    'edited_locally',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("edited_locally" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+    'last_synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _downloadStateMeta = const VerificationMeta(
+    'downloadState',
+  );
+  @override
+  late final GeneratedColumn<String> downloadState = GeneratedColumn<String>(
+    'download_state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('complete'),
+  );
+  static const VerificationMeta _usernameMeta = const VerificationMeta(
+    'username',
+  );
+  @override
+  late final GeneratedColumn<String> username = GeneratedColumn<String>(
+    'username',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ratingSumMeta = const VerificationMeta(
+    'ratingSum',
+  );
+  @override
+  late final GeneratedColumn<int> ratingSum = GeneratedColumn<int>(
+    'rating_sum',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _ratingCountMeta = const VerificationMeta(
+    'ratingCount',
+  );
+  @override
+  late final GeneratedColumn<int> ratingCount = GeneratedColumn<int>(
+    'rating_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -243,11 +352,20 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
     youtubeUrl,
     tags,
     visibility,
+    remoteId,
+    anonymousUpload,
     createdAt,
     updatedAt,
     version,
     syncState,
     deletedAt,
+    origin,
+    editedLocally,
+    lastSyncedAt,
+    downloadState,
+    username,
+    ratingSum,
+    ratingCount,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -358,6 +476,21 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
         visibility.isAcceptableOrUnknown(data['visibility']!, _visibilityMeta),
       );
     }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    if (data.containsKey('anonymous_upload')) {
+      context.handle(
+        _anonymousUploadMeta,
+        anonymousUpload.isAcceptableOrUnknown(
+          data['anonymous_upload']!,
+          _anonymousUploadMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -390,6 +523,60 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
       context.handle(
         _deletedAtMeta,
         deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('origin')) {
+      context.handle(
+        _originMeta,
+        origin.isAcceptableOrUnknown(data['origin']!, _originMeta),
+      );
+    }
+    if (data.containsKey('edited_locally')) {
+      context.handle(
+        _editedLocallyMeta,
+        editedLocally.isAcceptableOrUnknown(
+          data['edited_locally']!,
+          _editedLocallyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('download_state')) {
+      context.handle(
+        _downloadStateMeta,
+        downloadState.isAcceptableOrUnknown(
+          data['download_state']!,
+          _downloadStateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('username')) {
+      context.handle(
+        _usernameMeta,
+        username.isAcceptableOrUnknown(data['username']!, _usernameMeta),
+      );
+    }
+    if (data.containsKey('rating_sum')) {
+      context.handle(
+        _ratingSumMeta,
+        ratingSum.isAcceptableOrUnknown(data['rating_sum']!, _ratingSumMeta),
+      );
+    }
+    if (data.containsKey('rating_count')) {
+      context.handle(
+        _ratingCountMeta,
+        ratingCount.isAcceptableOrUnknown(
+          data['rating_count']!,
+          _ratingCountMeta,
+        ),
       );
     }
     return context;
@@ -461,6 +648,14 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
         DriftSqlType.string,
         data['${effectivePrefix}visibility'],
       )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+      anonymousUpload: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}anonymous_upload'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -481,6 +676,34 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongRow> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}deleted_at'],
       ),
+      origin: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origin'],
+      )!,
+      editedLocally: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}edited_locally'],
+      )!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_synced_at'],
+      ),
+      downloadState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}download_state'],
+      )!,
+      username: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}username'],
+      ),
+      ratingSum: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rating_sum'],
+      )!,
+      ratingCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rating_count'],
+      )!,
     );
   }
 
@@ -506,11 +729,31 @@ class SongRow extends DataClass implements Insertable<SongRow> {
   final String youtubeUrl;
   final String tags;
   final String visibility;
+
+  /// Id of the public row in `community_songs`, once this song is published.
+  /// Null means the song exists only on this device (or was imported).
+  final String? remoteId;
+
+  /// Credits the upload as Anonymous even though the server keeps the owner.
+  final bool anonymousUpload;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int version;
   final String syncState;
   final DateTime? deletedAt;
+
+  /// `local` songs were created or edited here. `community` songs are offline
+  /// copies from the shared catalog; they stay read-only until the user edits
+  /// them, at which point [editedLocally] moves them into My Songs.
+  final String origin;
+  final bool editedLocally;
+  final DateTime? lastSyncedAt;
+  final String downloadState;
+
+  /// Community credit copied alongside the offline song.
+  final String? username;
+  final int ratingSum;
+  final int ratingCount;
   const SongRow({
     required this.id,
     required this.ownerId,
@@ -527,11 +770,20 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     required this.youtubeUrl,
     required this.tags,
     required this.visibility,
+    this.remoteId,
+    required this.anonymousUpload,
     required this.createdAt,
     required this.updatedAt,
     required this.version,
     required this.syncState,
     this.deletedAt,
+    required this.origin,
+    required this.editedLocally,
+    this.lastSyncedAt,
+    required this.downloadState,
+    this.username,
+    required this.ratingSum,
+    required this.ratingCount,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -553,6 +805,10 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     map['youtube_url'] = Variable<String>(youtubeUrl);
     map['tags'] = Variable<String>(tags);
     map['visibility'] = Variable<String>(visibility);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['anonymous_upload'] = Variable<bool>(anonymousUpload);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['version'] = Variable<int>(version);
@@ -560,6 +816,17 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<DateTime>(deletedAt);
     }
+    map['origin'] = Variable<String>(origin);
+    map['edited_locally'] = Variable<bool>(editedLocally);
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    }
+    map['download_state'] = Variable<String>(downloadState);
+    if (!nullToAbsent || username != null) {
+      map['username'] = Variable<String>(username);
+    }
+    map['rating_sum'] = Variable<int>(ratingSum);
+    map['rating_count'] = Variable<int>(ratingCount);
     return map;
   }
 
@@ -582,6 +849,10 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       youtubeUrl: Value(youtubeUrl),
       tags: Value(tags),
       visibility: Value(visibility),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      anonymousUpload: Value(anonymousUpload),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       version: Value(version),
@@ -589,6 +860,17 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
+      origin: Value(origin),
+      editedLocally: Value(editedLocally),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+      downloadState: Value(downloadState),
+      username: username == null && nullToAbsent
+          ? const Value.absent()
+          : Value(username),
+      ratingSum: Value(ratingSum),
+      ratingCount: Value(ratingCount),
     );
   }
 
@@ -615,11 +897,20 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       youtubeUrl: serializer.fromJson<String>(json['youtubeUrl']),
       tags: serializer.fromJson<String>(json['tags']),
       visibility: serializer.fromJson<String>(json['visibility']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      anonymousUpload: serializer.fromJson<bool>(json['anonymousUpload']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       version: serializer.fromJson<int>(json['version']),
       syncState: serializer.fromJson<String>(json['syncState']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      origin: serializer.fromJson<String>(json['origin']),
+      editedLocally: serializer.fromJson<bool>(json['editedLocally']),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
+      downloadState: serializer.fromJson<String>(json['downloadState']),
+      username: serializer.fromJson<String?>(json['username']),
+      ratingSum: serializer.fromJson<int>(json['ratingSum']),
+      ratingCount: serializer.fromJson<int>(json['ratingCount']),
     );
   }
   @override
@@ -641,11 +932,20 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       'youtubeUrl': serializer.toJson<String>(youtubeUrl),
       'tags': serializer.toJson<String>(tags),
       'visibility': serializer.toJson<String>(visibility),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'anonymousUpload': serializer.toJson<bool>(anonymousUpload),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'version': serializer.toJson<int>(version),
       'syncState': serializer.toJson<String>(syncState),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'origin': serializer.toJson<String>(origin),
+      'editedLocally': serializer.toJson<bool>(editedLocally),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
+      'downloadState': serializer.toJson<String>(downloadState),
+      'username': serializer.toJson<String?>(username),
+      'ratingSum': serializer.toJson<int>(ratingSum),
+      'ratingCount': serializer.toJson<int>(ratingCount),
     };
   }
 
@@ -665,11 +965,20 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     String? youtubeUrl,
     String? tags,
     String? visibility,
+    Value<String?> remoteId = const Value.absent(),
+    bool? anonymousUpload,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? version,
     String? syncState,
     Value<DateTime?> deletedAt = const Value.absent(),
+    String? origin,
+    bool? editedLocally,
+    Value<DateTime?> lastSyncedAt = const Value.absent(),
+    String? downloadState,
+    Value<String?> username = const Value.absent(),
+    int? ratingSum,
+    int? ratingCount,
   }) => SongRow(
     id: id ?? this.id,
     ownerId: ownerId ?? this.ownerId,
@@ -686,11 +995,20 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     youtubeUrl: youtubeUrl ?? this.youtubeUrl,
     tags: tags ?? this.tags,
     visibility: visibility ?? this.visibility,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+    anonymousUpload: anonymousUpload ?? this.anonymousUpload,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     version: version ?? this.version,
     syncState: syncState ?? this.syncState,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    origin: origin ?? this.origin,
+    editedLocally: editedLocally ?? this.editedLocally,
+    lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+    downloadState: downloadState ?? this.downloadState,
+    username: username.present ? username.value : this.username,
+    ratingSum: ratingSum ?? this.ratingSum,
+    ratingCount: ratingCount ?? this.ratingCount,
   );
   SongRow copyWithCompanion(SongsCompanion data) {
     return SongRow(
@@ -721,11 +1039,30 @@ class SongRow extends DataClass implements Insertable<SongRow> {
       visibility: data.visibility.present
           ? data.visibility.value
           : this.visibility,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      anonymousUpload: data.anonymousUpload.present
+          ? data.anonymousUpload.value
+          : this.anonymousUpload,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       version: data.version.present ? data.version.value : this.version,
       syncState: data.syncState.present ? data.syncState.value : this.syncState,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      origin: data.origin.present ? data.origin.value : this.origin,
+      editedLocally: data.editedLocally.present
+          ? data.editedLocally.value
+          : this.editedLocally,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+      downloadState: data.downloadState.present
+          ? data.downloadState.value
+          : this.downloadState,
+      username: data.username.present ? data.username.value : this.username,
+      ratingSum: data.ratingSum.present ? data.ratingSum.value : this.ratingSum,
+      ratingCount: data.ratingCount.present
+          ? data.ratingCount.value
+          : this.ratingCount,
     );
   }
 
@@ -747,17 +1084,26 @@ class SongRow extends DataClass implements Insertable<SongRow> {
           ..write('youtubeUrl: $youtubeUrl, ')
           ..write('tags: $tags, ')
           ..write('visibility: $visibility, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('anonymousUpload: $anonymousUpload, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
           ..write('syncState: $syncState, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('origin: $origin, ')
+          ..write('editedLocally: $editedLocally, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('downloadState: $downloadState, ')
+          ..write('username: $username, ')
+          ..write('ratingSum: $ratingSum, ')
+          ..write('ratingCount: $ratingCount')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     ownerId,
     title,
@@ -773,12 +1119,21 @@ class SongRow extends DataClass implements Insertable<SongRow> {
     youtubeUrl,
     tags,
     visibility,
+    remoteId,
+    anonymousUpload,
     createdAt,
     updatedAt,
     version,
     syncState,
     deletedAt,
-  );
+    origin,
+    editedLocally,
+    lastSyncedAt,
+    downloadState,
+    username,
+    ratingSum,
+    ratingCount,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -798,11 +1153,20 @@ class SongRow extends DataClass implements Insertable<SongRow> {
           other.youtubeUrl == this.youtubeUrl &&
           other.tags == this.tags &&
           other.visibility == this.visibility &&
+          other.remoteId == this.remoteId &&
+          other.anonymousUpload == this.anonymousUpload &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.version == this.version &&
           other.syncState == this.syncState &&
-          other.deletedAt == this.deletedAt);
+          other.deletedAt == this.deletedAt &&
+          other.origin == this.origin &&
+          other.editedLocally == this.editedLocally &&
+          other.lastSyncedAt == this.lastSyncedAt &&
+          other.downloadState == this.downloadState &&
+          other.username == this.username &&
+          other.ratingSum == this.ratingSum &&
+          other.ratingCount == this.ratingCount);
 }
 
 class SongsCompanion extends UpdateCompanion<SongRow> {
@@ -821,11 +1185,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
   final Value<String> youtubeUrl;
   final Value<String> tags;
   final Value<String> visibility;
+  final Value<String?> remoteId;
+  final Value<bool> anonymousUpload;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> version;
   final Value<String> syncState;
   final Value<DateTime?> deletedAt;
+  final Value<String> origin;
+  final Value<bool> editedLocally;
+  final Value<DateTime?> lastSyncedAt;
+  final Value<String> downloadState;
+  final Value<String?> username;
+  final Value<int> ratingSum;
+  final Value<int> ratingCount;
   final Value<int> rowid;
   const SongsCompanion({
     this.id = const Value.absent(),
@@ -843,11 +1216,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     this.youtubeUrl = const Value.absent(),
     this.tags = const Value.absent(),
     this.visibility = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.anonymousUpload = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.version = const Value.absent(),
     this.syncState = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.origin = const Value.absent(),
+    this.editedLocally = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.downloadState = const Value.absent(),
+    this.username = const Value.absent(),
+    this.ratingSum = const Value.absent(),
+    this.ratingCount = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SongsCompanion.insert({
@@ -866,11 +1248,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     this.youtubeUrl = const Value.absent(),
     this.tags = const Value.absent(),
     this.visibility = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.anonymousUpload = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.version = const Value.absent(),
     this.syncState = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.origin = const Value.absent(),
+    this.editedLocally = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.downloadState = const Value.absent(),
+    this.username = const Value.absent(),
+    this.ratingSum = const Value.absent(),
+    this.ratingCount = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -892,11 +1283,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     Expression<String>? youtubeUrl,
     Expression<String>? tags,
     Expression<String>? visibility,
+    Expression<String>? remoteId,
+    Expression<bool>? anonymousUpload,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? version,
     Expression<String>? syncState,
     Expression<DateTime>? deletedAt,
+    Expression<String>? origin,
+    Expression<bool>? editedLocally,
+    Expression<DateTime>? lastSyncedAt,
+    Expression<String>? downloadState,
+    Expression<String>? username,
+    Expression<int>? ratingSum,
+    Expression<int>? ratingCount,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -916,11 +1316,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
       if (youtubeUrl != null) 'youtube_url': youtubeUrl,
       if (tags != null) 'tags': tags,
       if (visibility != null) 'visibility': visibility,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (anonymousUpload != null) 'anonymous_upload': anonymousUpload,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (version != null) 'version': version,
       if (syncState != null) 'sync_state': syncState,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (origin != null) 'origin': origin,
+      if (editedLocally != null) 'edited_locally': editedLocally,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (downloadState != null) 'download_state': downloadState,
+      if (username != null) 'username': username,
+      if (ratingSum != null) 'rating_sum': ratingSum,
+      if (ratingCount != null) 'rating_count': ratingCount,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -941,11 +1350,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     Value<String>? youtubeUrl,
     Value<String>? tags,
     Value<String>? visibility,
+    Value<String?>? remoteId,
+    Value<bool>? anonymousUpload,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? version,
     Value<String>? syncState,
     Value<DateTime?>? deletedAt,
+    Value<String>? origin,
+    Value<bool>? editedLocally,
+    Value<DateTime?>? lastSyncedAt,
+    Value<String>? downloadState,
+    Value<String?>? username,
+    Value<int>? ratingSum,
+    Value<int>? ratingCount,
     Value<int>? rowid,
   }) {
     return SongsCompanion(
@@ -964,11 +1382,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
       youtubeUrl: youtubeUrl ?? this.youtubeUrl,
       tags: tags ?? this.tags,
       visibility: visibility ?? this.visibility,
+      remoteId: remoteId ?? this.remoteId,
+      anonymousUpload: anonymousUpload ?? this.anonymousUpload,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       version: version ?? this.version,
       syncState: syncState ?? this.syncState,
       deletedAt: deletedAt ?? this.deletedAt,
+      origin: origin ?? this.origin,
+      editedLocally: editedLocally ?? this.editedLocally,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      downloadState: downloadState ?? this.downloadState,
+      username: username ?? this.username,
+      ratingSum: ratingSum ?? this.ratingSum,
+      ratingCount: ratingCount ?? this.ratingCount,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1021,6 +1448,12 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     if (visibility.present) {
       map['visibility'] = Variable<String>(visibility.value);
     }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (anonymousUpload.present) {
+      map['anonymous_upload'] = Variable<bool>(anonymousUpload.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1035,6 +1468,27 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
     }
     if (deletedAt.present) {
       map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (origin.present) {
+      map['origin'] = Variable<String>(origin.value);
+    }
+    if (editedLocally.present) {
+      map['edited_locally'] = Variable<bool>(editedLocally.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
+    if (downloadState.present) {
+      map['download_state'] = Variable<String>(downloadState.value);
+    }
+    if (username.present) {
+      map['username'] = Variable<String>(username.value);
+    }
+    if (ratingSum.present) {
+      map['rating_sum'] = Variable<int>(ratingSum.value);
+    }
+    if (ratingCount.present) {
+      map['rating_count'] = Variable<int>(ratingCount.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1060,11 +1514,20 @@ class SongsCompanion extends UpdateCompanion<SongRow> {
           ..write('youtubeUrl: $youtubeUrl, ')
           ..write('tags: $tags, ')
           ..write('visibility: $visibility, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('anonymousUpload: $anonymousUpload, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
           ..write('syncState: $syncState, ')
           ..write('deletedAt: $deletedAt, ')
+          ..write('origin: $origin, ')
+          ..write('editedLocally: $editedLocally, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('downloadState: $downloadState, ')
+          ..write('username: $username, ')
+          ..write('ratingSum: $ratingSum, ')
+          ..write('ratingCount: $ratingCount, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3842,11 +4305,20 @@ typedef $$SongsTableCreateCompanionBuilder = SongsCompanion Function({
   Value<String> youtubeUrl,
   Value<String> tags,
   Value<String> visibility,
+  Value<String?> remoteId,
+  Value<bool> anonymousUpload,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> version,
   Value<String> syncState,
   Value<DateTime?> deletedAt,
+  Value<String> origin,
+  Value<bool> editedLocally,
+  Value<DateTime?> lastSyncedAt,
+  Value<String> downloadState,
+  Value<String?> username,
+  Value<int> ratingSum,
+  Value<int> ratingCount,
   Value<int> rowid,
 });
 typedef $$SongsTableUpdateCompanionBuilder = SongsCompanion Function({
@@ -3865,11 +4337,20 @@ typedef $$SongsTableUpdateCompanionBuilder = SongsCompanion Function({
   Value<String> youtubeUrl,
   Value<String> tags,
   Value<String> visibility,
+  Value<String?> remoteId,
+  Value<bool> anonymousUpload,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> version,
   Value<String> syncState,
   Value<DateTime?> deletedAt,
+  Value<String> origin,
+  Value<bool> editedLocally,
+  Value<DateTime?> lastSyncedAt,
+  Value<String> downloadState,
+  Value<String?> username,
+  Value<int> ratingSum,
+  Value<int> ratingCount,
   Value<int> rowid,
 });
 
@@ -3997,6 +4478,16 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get anonymousUpload => $composableBuilder(
+    column: $table.anonymousUpload,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -4019,6 +4510,41 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
 
   ColumnFilters<DateTime> get deletedAt => $composableBuilder(
     column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origin => $composableBuilder(
+    column: $table.origin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get editedLocally => $composableBuilder(
+    column: $table.editedLocally,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get downloadState => $composableBuilder(
+    column: $table.downloadState,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ratingSum => $composableBuilder(
+    column: $table.ratingSum,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ratingCount => $composableBuilder(
+    column: $table.ratingCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4157,6 +4683,16 @@ class $$SongsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get anonymousUpload => $composableBuilder(
+    column: $table.anonymousUpload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4179,6 +4715,41 @@ class $$SongsTableOrderingComposer
 
   ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
     column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origin => $composableBuilder(
+    column: $table.origin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get editedLocally => $composableBuilder(
+    column: $table.editedLocally,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get downloadState => $composableBuilder(
+    column: $table.downloadState,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ratingSum => $composableBuilder(
+    column: $table.ratingSum,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ratingCount => $composableBuilder(
+    column: $table.ratingCount,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -4249,6 +4820,14 @@ class $$SongsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<bool> get anonymousUpload => $composableBuilder(
+    column: $table.anonymousUpload,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -4263,6 +4842,35 @@ class $$SongsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get origin =>
+      $composableBuilder(column: $table.origin, builder: (column) => column);
+
+  GeneratedColumn<bool> get editedLocally => $composableBuilder(
+    column: $table.editedLocally,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get downloadState => $composableBuilder(
+    column: $table.downloadState,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get username =>
+      $composableBuilder(column: $table.username, builder: (column) => column);
+
+  GeneratedColumn<int> get ratingSum =>
+      $composableBuilder(column: $table.ratingSum, builder: (column) => column);
+
+  GeneratedColumn<int> get ratingCount => $composableBuilder(
+    column: $table.ratingCount,
+    builder: (column) => column,
+  );
 
   Expression<T> favoritesRefs<T extends Object>(
     Expression<T> Function($$FavoritesTableAnnotationComposer a) f,
@@ -4358,11 +4966,20 @@ class $$SongsTableTableManager
                 Value<String> youtubeUrl = const Value.absent(),
                 Value<String> tags = const Value.absent(),
                 Value<String> visibility = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+                Value<bool> anonymousUpload = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> version = const Value.absent(),
                 Value<String> syncState = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
+                Value<String> origin = const Value.absent(),
+                Value<bool> editedLocally = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
+                Value<String> downloadState = const Value.absent(),
+                Value<String?> username = const Value.absent(),
+                Value<int> ratingSum = const Value.absent(),
+                Value<int> ratingCount = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SongsCompanion(
                 id: id,
@@ -4380,11 +4997,20 @@ class $$SongsTableTableManager
                 youtubeUrl: youtubeUrl,
                 tags: tags,
                 visibility: visibility,
+                remoteId: remoteId,
+                anonymousUpload: anonymousUpload,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
                 syncState: syncState,
                 deletedAt: deletedAt,
+                origin: origin,
+                editedLocally: editedLocally,
+                lastSyncedAt: lastSyncedAt,
+                downloadState: downloadState,
+                username: username,
+                ratingSum: ratingSum,
+                ratingCount: ratingCount,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4404,11 +5030,20 @@ class $$SongsTableTableManager
                 Value<String> youtubeUrl = const Value.absent(),
                 Value<String> tags = const Value.absent(),
                 Value<String> visibility = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+                Value<bool> anonymousUpload = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> version = const Value.absent(),
                 Value<String> syncState = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
+                Value<String> origin = const Value.absent(),
+                Value<bool> editedLocally = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
+                Value<String> downloadState = const Value.absent(),
+                Value<String?> username = const Value.absent(),
+                Value<int> ratingSum = const Value.absent(),
+                Value<int> ratingCount = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SongsCompanion.insert(
                 id: id,
@@ -4426,11 +5061,20 @@ class $$SongsTableTableManager
                 youtubeUrl: youtubeUrl,
                 tags: tags,
                 visibility: visibility,
+                remoteId: remoteId,
+                anonymousUpload: anonymousUpload,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
                 syncState: syncState,
                 deletedAt: deletedAt,
+                origin: origin,
+                editedLocally: editedLocally,
+                lastSyncedAt: lastSyncedAt,
+                downloadState: downloadState,
+                username: username,
+                ratingSum: ratingSum,
+                ratingCount: ratingCount,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

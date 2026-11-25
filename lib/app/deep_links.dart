@@ -91,6 +91,9 @@ String routeForIncomingLink(String raw) {
           : (uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '');
       if (target == 'reset-password') return '/set-new-password';
       if (target == 'auth-callback') return '/';
+      if (target == 'l' && uri.pathSegments.isNotEmpty) {
+        return '/live/${Uri.encodeComponent(uri.pathSegments.first)}';
+      }
     }
     // A universal link straight to the web confirmation page should land in
     // the app at home; the page itself forwards the code to the scheme.
@@ -98,6 +101,9 @@ String routeForIncomingLink(String raw) {
         uri.pathSegments[0] == 'auth' &&
         uri.pathSegments[1] == 'confirm') {
       return '/';
+    }
+    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'l') {
+      return '/live/${Uri.encodeComponent(uri.pathSegments[1])}';
     }
     final token = CplFormat.extractServerToken(input);
     if (token != null) return '/s/$token';
@@ -108,6 +114,20 @@ String routeForIncomingLink(String raw) {
     }
   }
   return input.startsWith('/') ? input : '/$input';
+}
+
+/// True when [raw] points at a live collaborative setlist.
+bool isLiveDeepLink(String raw) {
+  final input = raw.trim();
+  final uri = Uri.tryParse(input);
+  if (uri == null) return false;
+  if (uri.scheme == CplFormat.customScheme) {
+    final target = uri.host.isNotEmpty
+        ? uri.host
+        : (uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '');
+    return target == 'l' && uri.pathSegments.isNotEmpty;
+  }
+  return uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'l';
 }
 
 /// True when [raw] is a Supabase auth redirect (email confirmation or

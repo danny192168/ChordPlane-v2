@@ -1,6 +1,10 @@
-/// Public-domain demo material so the app is usable on first launch.
-/// `lib/core/demo/demo_songs.dart` keeps these out of the user's way until
-/// they choose to load them from Settings or the empty state.
+// Small public-domain starter pack so a fresh install is useful offline.
+// The songs are seeded into local SQLite on first launch and add only a few
+// kilobytes to the app; there are no bundled images or audio files.
+
+/// Bump when the starter pack changes so existing installs receive new songs.
+const starterPackVersion = 2;
+
 class DemoDraft {
   const DemoDraft({
     required this.title,
@@ -169,6 +173,174 @@ I [D]leaned my [A]back against an [Bm]oak
 I [G]thought that [D]love would [A]surely [D]bind
 But [D]love grows [A]old and [Bm]shows its [G]age
 Like [D]morning [A]dew upon the [D]ground
+{end_of_verse}
+''',
+  ),
+  DemoDraft(
+    title: 'Auld Lang Syne',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 92,
+    tags: 'traditional, new year',
+    body: '''
+{start_of_verse: Verse 1}
+Should [G]old acquaintance be for[C]got, and [G]never brought to [D]mind?
+Should [G]old acquaintance be for[C]got, and [G]days of [D]auld lang [G]syne?
+{end_of_verse}
+
+{start_of_chorus: Chorus}
+For [G]auld lang [C]syne, my [G]dear,
+For [G]auld lang [D]syne,
+We'll [G]take a cup of [C]kindness [G]yet,
+For [G]days of [D]auld lang [G]syne.
+{end_of_chorus}
+''',
+  ),
+  DemoDraft(
+    title: 'Deck the Halls',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 120,
+    tags: 'traditional, christmas',
+    body: '''
+{start_of_verse: Verse 1}
+[G]Deck the halls with [C]boughs of [G]holly, [D]fa la la la [G]la, la la la [D]la.
+[G]'Tis the season to be [C]jolly, [D]fa la la la [G]la, la la la [D]la.
+{end_of_verse}
+
+{start_of_chorus: Chorus}
+[G]Don we now our [C]gay ap[G]parel, [D]fa la la la [G]la, la la la [D]la.
+[G]Troll the ancient [C]Yuletide [G]carol, [D]fa la la la [G]la, la la la [G]la.
+{end_of_chorus}
+''',
+  ),
+  DemoDraft(
+    title: 'Jingle Bells',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 138,
+    tags: 'traditional, christmas',
+    body: '''
+{start_of_chorus: Chorus}
+[G]Jingle bells, jingle [C]bells, jingle [G]all the [D]way!
+[G]Oh what fun it is to [C]ride in a [G]one-horse [D]open [G]sleigh!
+{end_of_chorus}
+
+{start_of_verse: Verse 1}
+[G]Dashing through the [C]snow in a [G]one-horse [D]open [G]sleigh,
+[G]O'er the fields we [C]go, laughing [G]all the [D]way.
+{end_of_verse}
+''',
+  ),
+  DemoDraft(
+    title: 'Silent Night',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 68,
+    tags: 'traditional, christmas',
+    body: '''
+{start_of_verse: Verse 1}
+[G]Silent night, holy [D]night,
+[G]All is calm, all is [D]bright.
+[C]Round yon virgin, [G]mother and child,
+[C]Holy infant so [D]tender and [G]mild.
+{end_of_verse}
+
+{start_of_verse: Verse 2}
+[G]Silent night, holy [D]night,
+[G]Shepherds quake at the [D]sight.
+[C]Glories stream from [G]heaven afar,
+[C]Heavenly hosts sing [D]alleluia.
+{end_of_verse}
+''',
+  ),
+  DemoDraft(
+    title: 'Greensleeves',
+    artist: 'Traditional',
+    key: 'Am',
+    tempo: 76,
+    tags: 'traditional',
+    body: '''
+{start_of_verse: Verse 1}
+[Am]Alas, my love, you [G]do me [Am]wrong,
+To [C]cast me off dis[G]courteous[Am]ly.
+[Am]For I have loved you [G]long, [Am]
+And [C]fondly thought you [G]loved me [Am]too.
+{end_of_verse}
+
+{start_of_chorus: Chorus}
+[Am]Greensleeves was all my [G]joy,
+[Am]Greensleeves was my de[C]light.
+[Am]Greensleeves was all my [G]joy,
+And [C]who but my lady [G]Greensleeves [Am].
+{end_of_chorus}
+''',
+  ),
+  DemoDraft(
+    title: 'Oh! Susanna',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 112,
+    tags: 'traditional, folk',
+    body: '''
+{start_of_verse: Verse 1}
+[G]I come from [C]Alabama with my [G]banjo on my [D]knee,
+[G]I'm g’wan to [C]Louisiana my [G]true love for to [D]see.
+[G]It rained all [C]night the [G]day I left, the [D]weather it was [G]dry,
+[G]The sun so [C]hot I [G]sweated lots, my [D]brow was [G]very high.
+{end_of_verse}
+
+{start_of_chorus: Chorus}
+[G]Oh, Susanna, [C]oh don't you [G]cry for [D]me,
+[G]I come from [C]Alabama with my [G]banjo on my [D]knee.
+{end_of_chorus}
+''',
+  ),
+  DemoDraft(
+    title: 'This Little Light of Mine',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 104,
+    tags: 'traditional, spiritual',
+    body: '''
+{start_of_verse: Verse 1}
+[G]This little light of [C]mine, I'm [G]gonna let it [D]shine.
+[G]This little light of [C]mine, I'm [G]gonna let it [D]shine.
+{end_of_verse}
+
+{start_of_chorus: Chorus}
+[G]Let it shine, let it [C]shine, let it [G]shine.
+[G]Hide it under a [C]bushel? [G]No! I'm gonna let it [D]shine.
+{end_of_chorus}
+''',
+  ),
+  DemoDraft(
+    title: 'When the Saints Go Marching In',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 116,
+    tags: 'traditional, jazz',
+    body: '''
+{start_of_verse: Verse 1}
+[G]Oh, when the saints go [C]marching [G]in,
+[G]Oh, when the saints go [C]marching [D]in,
+[G]Oh Lord, I [C]want to be in that [G]number,
+[G]When the saints go [C]marching [G]in.
+{end_of_verse}
+''',
+  ),
+  DemoDraft(
+    title: 'Home! Sweet Home!',
+    artist: 'Traditional',
+    key: 'G',
+    tempo: 76,
+    tags: 'traditional, folk',
+    body: '''
+{start_of_verse: Verse 1}
+[G]Home, home, sweet, sweet [D]home!
+[G]There's no place like [C]home, [G]sweet, sweet [D]home.
+[G]No matter where I [C]roam, [G]nothing can [D]e'er atone
+For the [G]peace and [C]quiet of [G]my own [D]sweet [G]home.
 {end_of_verse}
 ''',
   ),

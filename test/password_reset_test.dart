@@ -202,8 +202,11 @@ class _FakeSignInApi implements SignInApi {
       throw UnimplementedError();
 
   @override
-  Future<AuthResponse> signUp(String email, String password) =>
-      throw UnimplementedError();
+  Future<AuthResponse> signUp(
+    String email,
+    String password, {
+    String? username,
+  }) => throw UnimplementedError();
 
   @override
   Future<AuthResponse> signInWithGoogle(String idToken) =>

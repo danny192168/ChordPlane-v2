@@ -25,19 +25,19 @@ class AppShell extends StatelessWidget {
             label: 'Library',
           ),
           NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search),
-            label: 'Search',
+            icon: Icon(Icons.bookmark_outline),
+            selectedIcon: Icon(Icons.bookmark),
+            label: 'Saved',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.favorite_outline),
+            selectedIcon: Icon(Icons.favorite),
+            label: 'Favorites',
           ),
           NavigationDestination(
             icon: Icon(Icons.queue_music_outlined),
             selectedIcon: Icon(Icons.queue_music),
             label: 'Setlists',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune),
-            label: 'Settings',
           ),
         ],
       ),

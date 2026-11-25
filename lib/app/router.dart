@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/community/presentation/community_song_screen.dart';
 import '../features/library/library_screen.dart';
-import '../features/search/search_screen.dart';
+import '../features/library/favorites_screen.dart';
+import '../features/library/saved_screen.dart';
+import '../features/live/presentation/live_setlist_screen.dart';
+import '../features/profile/profile_screen.dart';
 import '../features/setlists/setlists_screen.dart';
 import '../features/setlists/setlist_detail_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -13,6 +17,7 @@ import '../features/sharing/cloud/my_shares_screen.dart';
 import '../features/sharing/cloud/password_reset.dart';
 import '../features/sharing/import_screen.dart';
 import '../features/songs/presentation/artist_screen.dart';
+import '../features/songs/presentation/online_artist_screen.dart';
 import '../features/songs/presentation/song_editor_screen.dart';
 import '../features/songs/presentation/song_viewer_screen.dart';
 import 'app_shell.dart';
@@ -20,9 +25,11 @@ import 'deep_links.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _libraryNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'library');
-final _searchNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'search');
+final _savedNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'saved');
+final _favoritesNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'favorites',
+);
 final _setlistsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'setlists');
-final _settingsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'settings');
 
 /// Where the app should open. Deep links replace this before the router is
 /// built; the root route is the default.
@@ -52,11 +59,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
-            navigatorKey: _searchNavigatorKey,
+            navigatorKey: _savedNavigatorKey,
             routes: [
               GoRoute(
-                path: '/search',
-                builder: (context, state) => const SearchScreen(),
+                path: '/saved',
+                builder: (context, state) => const SavedScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _favoritesNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/favorites',
+                builder: (context, state) => const FavoritesScreen(),
               ),
             ],
           ),
@@ -74,19 +90,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          StatefulShellBranch(
-            navigatorKey: _settingsNavigatorKey,
-            routes: [
-              GoRoute(
-                path: '/settings',
-                builder: (context, state) => const SettingsScreen(),
-              ),
-              GoRoute(
-                path: '/my-shares',
-                builder: (context, state) => const MySharesScreen(),
-              ),
-            ],
-          ),
         ],
       ),
       GoRoute(
@@ -94,6 +97,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) =>
             SongViewerScreen(songId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/community/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => CommunitySongScreen(
+          songId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/live/:token',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => LiveSetlistScreen(
+          token: state.pathParameters['token']!,
+        ),
+      ),
+      GoRoute(
+        path: '/l/:token',
+        parentNavigatorKey: rootNavigatorKey,
+        redirect: (context, state) =>
+            '/live/${Uri.encodeComponent(state.pathParameters['token']!)}',
       ),
       GoRoute(
         path: '/editor',
@@ -109,8 +132,33 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/artist/:slug',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) =>
-            ArtistScreen(slug: state.pathParameters['slug']!),
+        builder: (context, state) => ArtistScreen(
+          slug: state.pathParameters['slug']!,
+          favoritesOnly: state.uri.queryParameters['favorites'] == '1',
+          savedOnly: state.uri.queryParameters['saved'] == '1',
+        ),
+      ),
+      GoRoute(
+        path: '/online-artist/:artist',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => OnlineArtistScreen(
+          artist: state.pathParameters['artist']!,
+        ),
+      ),
+      GoRoute(
+        path: '/profile',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/my-shares',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MySharesScreen(),
       ),
       GoRoute(
         path: '/import',
@@ -118,6 +166,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ImportScreen(
           initialCode: state.uri.queryParameters['d'],
           initialToken: state.uri.queryParameters['s'],
+          initialFilePath: state.uri.queryParameters['file'],
         ),
       ),
       GoRoute(
@@ -181,6 +230,7 @@ class _DeepLinkRecoveryState extends State<_DeepLinkRecovery> {
   late final bool _isDeepLink =
       CplFormat.extractServerToken(widget.location) != null ||
       CplBundle.extractShareCode(widget.location) != null ||
+      isLiveDeepLink(widget.location) ||
       isAuthDeepLink(widget.location);
 
   @override

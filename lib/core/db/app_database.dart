@@ -23,11 +23,35 @@ class Songs extends Table {
   TextColumn get youtubeUrl => text().withDefault(const Constant(''))();
   TextColumn get tags => text().withDefault(const Constant(''))();
   TextColumn get visibility => text().withDefault(const Constant('private'))();
+
+  /// Id of the public row in `community_songs`, once this song is published.
+  /// Null means the song exists only on this device (or was imported).
+  TextColumn get remoteId => text().nullable()();
+
+  /// Credits the upload as Anonymous even though the server keeps the owner.
+  BoolColumn get anonymousUpload =>
+      boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   IntColumn get version => integer().withDefault(const Constant(1))();
   TextColumn get syncState => text().withDefault(const Constant('local'))();
   DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  /// `local` songs were created or edited here. `community` songs are offline
+  /// copies from the shared catalog; they stay read-only until the user edits
+  /// them, at which point [editedLocally] moves them into My Songs.
+  TextColumn get origin => text().withDefault(const Constant('local'))();
+  BoolColumn get editedLocally =>
+      boolean().withDefault(const Constant(false))();
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
+  TextColumn get downloadState =>
+      text().withDefault(const Constant('complete'))();
+
+  /// Community credit copied alongside the offline song.
+  TextColumn get username => text().nullable()();
+  IntColumn get ratingSum => integer().withDefault(const Constant(0))();
+  IntColumn get ratingCount => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -143,7 +167,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -154,6 +178,70 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.addColumn(songs, songs.chordDetectionMode);
+      }
+      if (from < 4) {
+        await m.addColumn(songs, songs.remoteId);
+        await m.addColumn(songs, songs.anonymousUpload);
+      }
+      if (from < 5) {
+        await customStatement('''
+          create table if not exists community_copies (
+            id text primary key,
+            title text not null,
+            artist text not null default '',
+            body text not null default '',
+            original_key text not null default '',
+            chord_detection_mode text not null default 'auto',
+            capo integer not null default 0,
+            tempo integer,
+            instrument text not null default 'guitar',
+            tuning text not null default 'standard',
+            youtube_url text not null default '',
+            tags text not null default '',
+            anonymous integer not null default 0,
+            username text,
+            created_at datetime not null,
+            synced_at datetime not null,
+            rating_sum integer not null default 0,
+            rating_count integer not null default 0
+          )
+        ''');
+      }
+      if (from < 6) {
+        await m.addColumn(songs, songs.origin);
+        await m.addColumn(songs, songs.editedLocally);
+        await m.addColumn(songs, songs.lastSyncedAt);
+        await m.addColumn(songs, songs.downloadState);
+        await m.addColumn(songs, songs.username);
+        await m.addColumn(songs, songs.ratingSum);
+        await m.addColumn(songs, songs.ratingCount);
+
+        // Move the old read-only cache into the one Songs table. Edited user
+        // songs win: a cache row never replaces an existing local song.
+        await customStatement('''
+          insert or ignore into songs (
+            id, owner_id, title, artist, artist_slug, body, original_key,
+            chord_detection_mode, capo, tempo, instrument, tuning,
+            youtube_url, tags, visibility, remote_id, anonymous_upload,
+            created_at, updated_at, version, sync_state, origin,
+            edited_locally, last_synced_at, download_state, username,
+            rating_sum, rating_count
+          )
+          select
+            c.id, 'local-user', c.title, c.artist,
+            lower(replace(trim(c.artist), ' ', '-')), c.body, c.original_key,
+            c.chord_detection_mode, c.capo, c.tempo, c.instrument, c.tuning,
+            c.youtube_url, c.tags, 'private', c.id, c.anonymous,
+            c.created_at, c.synced_at, 1, 'synced', 'community',
+            0, c.synced_at, 'complete', c.username,
+            c.rating_sum, c.rating_count
+          from community_copies c
+          where not exists (
+            select 1 from songs s
+            where s.id = c.id or (s.remote_id is not null and s.remote_id = c.id)
+          )
+        ''');
+        await customStatement('drop table if exists community_copies');
       }
     },
     beforeOpen: (details) async {

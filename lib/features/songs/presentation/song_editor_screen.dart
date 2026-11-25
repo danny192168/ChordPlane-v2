@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/chords/chord_detection.dart';
 import '../../../core/chords/text_diagnostics.dart';
 import '../../../core/settings/settings.dart';
+import '../../../core/validation/youtube_link.dart';
+import '../../community/presentation/publish_song_sheet.dart';
 import '../data/song_providers.dart';
 import '../data/song_repository.dart';
 import 'widgets/chord_sheets.dart';
@@ -28,37 +30,58 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
   final _capo = TextEditingController();
   final _tempo = TextEditingController();
   final _youtube = TextEditingController();
-  final _tags = TextEditingController();
+  String _tags = '';
   final _body = TextEditingController();
 
   bool _loading = true;
   bool _saving = false;
   bool _preview = false;
+  double _editorScale = 1.0;
   bool _notFound = false;
+  bool _publishWhenSaved = false;
   ChordDetectionMode _chordMode = ChordDetectionMode.auto;
 
+  /// Programmatic edits (toolbar inserts, clean-up) and typed edits share one
+  /// stack. Flutter's own TextField undo only covers typing, and toolbar
+  /// replacements clear it, so the editor keeps its own history instead.
+  final List<_BodySnapshot> _history = <_BodySnapshot>[];
+  int _historyIndex = -1;
+  bool _restoringSnapshot = false;
+
   bool get _isEditing => widget.songId != null;
+  bool get _canUndo => _historyIndex > 0;
+  bool get _canRedo => _historyIndex >= 0 && _historyIndex < _history.length - 1;
+
+  void _zoomIn() => setState(
+    () => _editorScale = (_editorScale + 0.1).clamp(0.7, 2.0),
+  );
+
+  void _zoomOut() => setState(
+    () => _editorScale = (_editorScale - 0.1).clamp(0.7, 2.0),
+  );
 
   @override
   void initState() {
     super.initState();
+    _body.addListener(_onBodyChanged);
     if (_isEditing) {
       _load();
     } else {
       _chordMode = ref.read(settingsProvider).defaultChordDetectionMode;
+      _resetHistory();
       _loading = false;
     }
   }
 
   @override
   void dispose() {
+    _body.removeListener(_onBodyChanged);
     _title.dispose();
     _artist.dispose();
     _key.dispose();
     _capo.dispose();
     _tempo.dispose();
     _youtube.dispose();
-    _tags.dispose();
     _body.dispose();
     super.dispose();
   }
@@ -79,9 +102,10 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     _capo.text = song.capo == 0 ? '' : '${song.capo}';
     _tempo.text = song.tempo?.toString() ?? '';
     _youtube.text = song.youtubeUrl;
-    _tags.text = song.tags;
+    _tags = song.tags;
     _body.text = song.body;
     _chordMode = ChordDetectionMode.fromStorage(song.chordDetectionMode);
+    _resetHistory();
     setState(() => _loading = false);
   }
 
@@ -102,11 +126,22 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
 
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit song' : 'New song'),
-        actions: [
-          if (_isEditing)
+    return _withUndoShortcuts(
+      Scaffold(
+        appBar: AppBar(
+          title: Text(_isEditing ? 'Edit song' : 'New song'),
+          actions: [
+            IconButton(
+              tooltip: 'Undo',
+              onPressed: _canUndo ? _undo : null,
+              icon: const Icon(Icons.undo),
+            ),
+            IconButton(
+              tooltip: 'Redo',
+              onPressed: _canRedo ? _redo : null,
+              icon: const Icon(Icons.redo),
+            ),
+            if (_isEditing)
             IconButton(
               tooltip: 'Delete song',
               onPressed: _delete,
@@ -148,6 +183,9 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 labelText: 'Artist',
                 hintText: 'e.g. Oasis',
               ),
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'Give the song an artist'
+                  : null,
             ),
             const SizedBox(height: 12),
             Row(
@@ -197,42 +235,29 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 hintText: 'https://youtube.com/watch?v=…',
                 prefixIcon: Icon(Icons.play_circle_outline),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _tags,
-              decoration: const InputDecoration(
-                labelText: 'Tags (optional)',
-                hintText: 'rock, acoustic, campfire',
-                prefixIcon: Icon(Icons.tag),
-              ),
+              validator: validateYouTubeLink,
             ),
             const SizedBox(height: 26),
             Row(
               children: [
-                Text(
-                  'Chords & lyrics',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+                Expanded(
+                  child: Text(
+                    'Chords & lyrics',
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 SegmentedButton<bool>(
                   showSelectedIcon: false,
                   style: const ButtonStyle(
                     visualDensity: VisualDensity.compact,
                   ),
                   segments: const [
-                    ButtonSegment(
-                      value: false,
-                      icon: Icon(Icons.edit_outlined, size: 16),
-                      label: Text('Write'),
-                    ),
-                    ButtonSegment(
-                      value: true,
-                      icon: Icon(Icons.visibility_outlined, size: 16),
-                      label: Text('Preview'),
-                    ),
+                    ButtonSegment(value: false, label: Text('Write')),
+                    ButtonSegment(value: true, label: Text('Preview')),
                   ],
                   selected: {_preview},
                   onSelectionChanged: (value) =>
@@ -240,7 +265,33 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  tooltip: 'Zoom out',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _editorScale <= 0.7 ? null : _zoomOut,
+                  icon: const Icon(Icons.zoom_out, size: 20),
+                ),
+                Text(
+                  '${(_editorScale * 100).round()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Zoom in',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _editorScale >= 2.0 ? null : _zoomIn,
+                  icon: const Icon(Icons.zoom_in, size: 20),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             _buildDetectionSelector(theme),
             const SizedBox(height: 10),
             if (_preview)
@@ -253,9 +304,9 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                 minLines: 16,
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'monospace',
-                  fontSize: 13,
+                  fontSize: 13 * _editorScale,
                   height: 1.45,
                 ),
                 decoration: const InputDecoration(
@@ -266,6 +317,28 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
                       '{start_of_verse: Verse 1}\n'
                       '[G]Amazing grace, how [C]sweet the sound\n'
                       '{end_of_verse}',
+                ),
+              ),
+            ],
+            if (!_isEditing) ...[
+              const SizedBox(height: 20),
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  value: _publishWhenSaved,
+                  onChanged: _saving
+                      ? null
+                      : (value) =>
+                          setState(() => _publishWhenSaved = value),
+                  secondary: Icon(
+                    Icons.public,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: const Text('Publish to Public Library'),
+                  subtitle: const Text(
+                    'Save here first, then make a public copy. You will '
+                    'confirm the details in the next step.',
+                  ),
                 ),
               ),
             ],
@@ -284,8 +357,92 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
           ],
         ),
       ),
+      ),
     );
   }
+
+  Widget _withUndoShortcuts(Widget child) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): _undo,
+        const SingleActivator(LogicalKeyboardKey.keyZ, meta: true): _undo,
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          control: true,
+          shift: true,
+        ): _redo,
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          meta: true,
+          shift: true,
+        ): _redo,
+        const SingleActivator(LogicalKeyboardKey.keyY, control: true): _redo,
+      },
+      child: child,
+    );
+  }
+
+  void _resetHistory() {
+    _history
+      ..clear()
+      ..add(_BodySnapshot(_body.text, 0, 0));
+    _historyIndex = 0;
+  }
+
+  void _onBodyChanged() {
+    if (_restoringSnapshot || _history.isEmpty || !mounted) return;
+    _pushSnapshot();
+  }
+
+  void _pushSnapshot() {
+    final selection = _body.selection;
+    final snapshot = _BodySnapshot(
+      _body.text,
+      selection.isValid ? selection.start : _body.text.length,
+      selection.isValid ? selection.end : _body.text.length,
+    );
+    if (_historyIndex >= 0 && _history[_historyIndex].text == snapshot.text) {
+      return;
+    }
+    if (_historyIndex < _history.length - 1) {
+      _history.removeRange(_historyIndex + 1, _history.length);
+    }
+    _history.add(snapshot);
+    if (_history.length > 200) _history.removeAt(0);
+    _historyIndex = _history.length - 1;
+    if (mounted) setState(() {});
+  }
+
+  void _replaceBody(String text, {required int cursor}) {
+    _restoringSnapshot = true;
+    _body.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(
+        offset: cursor.clamp(0, text.length),
+      ),
+    );
+    _restoringSnapshot = false;
+    _pushSnapshot();
+  }
+
+  void _applySnapshot(int index) {
+    if (index < 0 || index >= _history.length) return;
+    final snapshot = _history[index];
+    final start = snapshot.selectionStart.clamp(0, snapshot.text.length);
+    final end = snapshot.selectionEnd.clamp(start, snapshot.text.length);
+    _restoringSnapshot = true;
+    _body.value = TextEditingValue(
+      text: snapshot.text,
+      selection: TextSelection(baseOffset: start, extentOffset: end),
+    );
+    _restoringSnapshot = false;
+    _historyIndex = index;
+    setState(() {});
+  }
+
+  void _undo() => _applySnapshot(_historyIndex - 1);
+
+  void _redo() => _applySnapshot(_historyIndex + 1);
 
   /// Lets the user choose how this song's chords are recognized. The
   /// choice is stored with the song, so it survives sharing and imports.
@@ -354,7 +511,7 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
       ),
       child: SongSheet(
         document: document,
-        fontScale: settings.textScale,
+        fontScale: settings.textScale * _editorScale,
         onChordTap: (chord) => showChordVoicingsSheet(
           context,
           chord: chord,
@@ -413,11 +570,10 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     final selection = controller.selection;
     final start = selection.isValid ? selection.start : controller.text.length;
     final end = selection.isValid ? selection.end : controller.text.length;
-    controller.value = TextEditingValue(
-      text: controller.text.replaceRange(start, end, text),
-      selection: TextSelection.collapsed(offset: start + text.length),
+    _replaceBody(
+      controller.text.replaceRange(start, end, text),
+      cursor: start + text.length,
     );
-    setState(() {});
   }
 
   void _insertSection() {
@@ -426,13 +582,10 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     final selection = controller.selection;
     final start = selection.isValid ? selection.start : controller.text.length;
     final end = selection.isValid ? selection.end : controller.text.length;
-    final newText = controller.text.replaceRange(start, end, template);
-    final cursor = start + template.indexOf('{end_of_verse}');
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: cursor),
+    _replaceBody(
+      controller.text.replaceRange(start, end, template),
+      cursor: start + template.indexOf('{end_of_verse}'),
     );
-    setState(() {});
   }
 
   /// Scans the song body for invisible characters that break chord
@@ -513,7 +666,8 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
       ),
     );
     if (cleaned ?? false) {
-      setState(() => _body.text = TextDiagnostics.sanitize(_body.text));
+      final cursor = _body.selection.isValid ? _body.selection.start : 0;
+      _replaceBody(TextDiagnostics.sanitize(_body.text), cursor: cursor);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Hidden characters removed.')),
@@ -538,13 +692,23 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
       capo: capo.clamp(0, 12),
       tempo: tempo?.clamp(20, 400),
       youtubeUrl: _youtube.text,
-      tags: _tags.text.trim(),
+      tags: _tags,
     );
 
-    final id = await ref
-        .read(songRepositoryProvider)
-        .saveDraft(id: widget.songId, draft: draft);
+    final repository = ref.read(songRepositoryProvider);
+    final id = await repository.saveDraft(id: widget.songId, draft: draft);
     if (!mounted) return;
+
+    // Publishing is opt-in during creation. The local save above is already
+    // durable, so a cancelled or failed publish never loses the song.
+    if (_publishWhenSaved && !_isEditing) {
+      final saved = await repository.getSong(id);
+      if (!mounted) return;
+      if (saved != null) {
+        await showPublishSongSheet(context, ref: ref, song: saved);
+      }
+      if (!mounted) return;
+    }
 
     if (_isEditing) {
       context.pop();
@@ -576,4 +740,13 @@ class _SongEditorScreenState extends ConsumerState<SongEditorScreen> {
     if (!mounted) return;
     context.go('/');
   }
+}
+
+@immutable
+class _BodySnapshot {
+  const _BodySnapshot(this.text, this.selectionStart, this.selectionEnd);
+
+  final String text;
+  final int selectionStart;
+  final int selectionEnd;
 }

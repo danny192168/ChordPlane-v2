@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
+import 'google_auth.dart';
 
 /// Local-first authentication seam.
 ///
@@ -83,9 +85,36 @@ final authGatewayProvider = Provider<AuthGateway>((ref) {
   return SupabaseAuthGateway(Supabase.instance.client.auth);
 });
 
-final currentUserIdProvider = Provider<String>(
-  (ref) => ref.watch(authGatewayProvider).currentUserId ?? 'local-user',
-);
+/// The active user id as a stream so repositories rebuild when the account
+/// changes. A one-time Provider kept favorites and local ownership bound to
+/// whichever account happened to be signed in on the first frame.
+final currentUserIdProvider = StreamProvider<String>((ref) async* {
+  final gateway = ref.watch(authGatewayProvider);
+  yield gateway.currentUserId ?? GuestAuthGateway.localUserId;
+  yield* gateway.userIdChanges.map(
+    (id) => id ?? GuestAuthGateway.localUserId,
+  );
+});
+
+/// True when Supabase accepted the JWT but the user row no longer exists.
+/// continuing with that session produces a 403 on every request.
+bool isStaleUserError(Object error) {
+  final message = error.toString().toLowerCase();
+  return message.contains('user from sub claim in jwt does not exist') ||
+      message.contains('jwt does not exist');
+}
+
+/// Clears both the Supabase session and the cached Google account after a
+/// stale JWT. Without the Google sign-out the next tap silently reuses the
+/// deleted identity and the error repeats.
+Future<void> clearStaleAuthSession() async {
+  try {
+    await Supabase.instance.client.auth.signOut();
+  } catch (error) {
+    debugPrint('Stale Supabase sign-out failed: $error');
+  }
+  await const GoogleAuth().signOut();
+}
 
 /// Rebuilds consumers whenever the sign-in state flips.
 final signedInProvider = StreamProvider<bool>(

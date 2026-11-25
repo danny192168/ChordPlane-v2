@@ -12,6 +12,9 @@ import '../../../core/chords/chord_detection.dart';
 import '../../../core/chords/chord_document.dart';
 import '../../../core/db/app_database.dart';
 import '../../../core/settings/settings.dart';
+import '../../../core/config/app_config.dart';
+import '../../community/data/community_api.dart';
+import '../../community/presentation/publish_song_sheet.dart';
 import '../../sharing/share_service.dart';
 import '../../sharing/share_sheet.dart';
 import '../data/song_providers.dart';
@@ -140,6 +143,9 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
       )),
     );
     final theme = Theme.of(context);
+    // Community rows are offline cache entries until the user taps Edit. That
+    // keeps someone else's song from being changed by accident.
+    final readOnlyCached = song.origin == 'community' && !song.editedLocally;
 
     return Scaffold(
       appBar: AppBar(
@@ -173,6 +179,12 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
           ],
         ),
         actions: [
+          if (readOnlyCached)
+            IconButton(
+              tooltip: 'Edit this copy',
+              onPressed: () => context.push('/editor/${song.id}'),
+              icon: const Icon(Icons.edit_outlined),
+            ),
           IconButton(
             tooltip: isFavorite ? 'Remove favorite' : 'Favorite',
             onPressed: () =>
@@ -213,6 +225,43 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
                   title: Text('Copy as ChordPro'),
                 ),
               ),
+              PopupMenuItem(
+                value: 'instrument',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.music_note_outlined),
+                  title: Text(
+                    'Instrument: ${settings.instrument == Instrument.ukulele ? 'Ukulele' : 'Guitar'}',
+                  ),
+                ),
+              ),
+              if (AppConfig.hasSupabase && !readOnlyCached) ...[
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'publish',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.public),
+                    title: Text(
+                      song.remoteId == null || song.editedLocally
+                          ? 'Publish as a new song'
+                          : 'Update online version',
+                    ),
+                  ),
+                ),
+                if (song.remoteId != null && !song.editedLocally)
+                  const PopupMenuItem(
+                    value: 'unpublish',
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.public_off),
+                      title: Text('Remove from community'),
+                    ),
+                  ),
+              ],
               const PopupMenuDivider(),
               const PopupMenuItem(
                 value: 'share',
@@ -252,6 +301,38 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
                     : null,
                 padding: const EdgeInsets.fromLTRB(18, 6, 18, 36),
                 children: [
+                  if (readOnlyCached)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Offline copy · read-only. Edit to make it yours.',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: theme.colorScheme.onSecondaryContainer,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => context.push('/editor/${song.id}'),
+                            child: const Text('Edit'),
+                          ),
+                        ],
+                      ),
+                    ),
                   _SongHeader(
                     song: song,
                     document: document,
@@ -655,6 +736,69 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
           const SnackBar(content: Text('ChordPro copied to clipboard')),
         );
         return;
+      case 'instrument':
+        _openInstrumentSheet();
+        return;
+      case 'publish':
+        // An edited copy keeps its source id for credit, but publishing must
+        // create a new community row instead of overwriting the original.
+        final remoteId = song.editedLocally ? null : song.remoteId;
+        final changed = await showPublishSongSheet(
+          context,
+          ref: ref,
+          song: song,
+          remoteId: remoteId,
+        );
+        if (changed && mounted) {
+          ref.invalidate(songProvider(song.id));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                remoteId == null
+                    ? 'Your copy is now published'
+                    : 'Community version is up to date',
+              ),
+            ),
+          );
+        }
+        return;
+      case 'unpublish':
+        if (song.remoteId == null) return;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Remove from community?'),
+            content: const Text(
+              'The public copy will be deleted. Your local song stays here.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Remove'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+        try {
+          await ref.read(communityApiProvider).unpublish(song.remoteId!);
+          await ref.read(songRepositoryProvider).clearPublished(song.id);
+          if (!mounted) return;
+          ref.invalidate(songProvider(song.id));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Removed from the community')),
+          );
+        } on CommunityException catch (error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.message)),
+          );
+        }
+        return;
       case 'share':
         final bundle = await ref
             .read(shareServiceProvider)
@@ -691,6 +835,64 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
           context.go('/');
         }
     }
+  }
+
+  /// Switching here writes the same saved setting as Settings, so the choice
+  /// applies to every song and survives a restart.
+  Future<void> _openInstrumentSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        final current = ref.watch(settingsProvider).instrument;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Instrument',
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Used for chord diagrams everywhere in the app.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<Instrument>(
+                segments: const [
+                  ButtonSegment(
+                    value: Instrument.guitar,
+                    icon: Icon(Icons.music_note_outlined),
+                    label: Text('Guitar'),
+                  ),
+                  ButtonSegment(
+                    value: Instrument.ukulele,
+                    icon: Icon(Icons.music_note_outlined),
+                    label: Text('Ukulele'),
+                  ),
+                ],
+                selected: {current},
+                onSelectionChanged: (selection) async {
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setInstrument(selection.first);
+                  if (sheetContext.mounted) Navigator.pop(sheetContext);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _onPointerDown(PointerDownEvent event) {

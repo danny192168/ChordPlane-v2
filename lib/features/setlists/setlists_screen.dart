@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'data/setlist_repository.dart';
+import '../../shared/widgets/profile_avatar_button.dart';
 import '../../shared/widgets/song_tile.dart';
 
 class SetlistsScreen extends ConsumerWidget {
@@ -27,6 +28,7 @@ class SetlistsScreen extends ConsumerWidget {
             onPressed: () => _create(context, ref),
             icon: const Icon(Icons.add),
           ),
+          const ProfileAvatarButton(),
         ],
       ),
       body: setlists.when(
@@ -59,6 +61,7 @@ class SetlistsScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'setlists-fab',
         onPressed: () => _create(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('New setlist'),

@@ -22,6 +22,7 @@ void main() {
   late _FakeSignInApi api;
   late _FakeGoogleAuth google;
   var resentEmails = <String>[];
+  String? signUpUsername;
 
   Future<AuthResponse> fakeResponse() async {
     await Future<void>.delayed(delay);
@@ -52,6 +53,7 @@ void main() {
     delay = Duration.zero;
     returnsSessionlessResponse = false;
     resentEmails = <String>[];
+    signUpUsername = null;
     google = _FakeGoogleAuth();
     api = _FakeSignInApi(
       call: () async {
@@ -65,6 +67,7 @@ void main() {
         return fakeResponse();
       },
       onResend: (email) async => resentEmails.add(email),
+      onSignUp: (username) => signUpUsername = username,
       onReset: (email) async {},
       onUpdatePassword: (password) async {},
       onSignOut: () async {},
@@ -98,9 +101,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> submit(WidgetTester tester, {String label = 'Sign in'}) async {
+  Future<void> submit(
+    WidgetTester tester, {
+    String label = 'Sign in',
+    String? username,
+  }) async {
     await tester.enterText(find.byType(TextField).at(0), 't@example.com');
-    await tester.enterText(find.byType(TextField).at(1), 'password123');
+    final passwordIndex = username == null ? 1 : 2;
+    if (username != null) {
+      await tester.enterText(find.byType(TextField).at(1), username);
+    }
+    await tester.enterText(
+      find.byType(TextField).at(passwordIndex),
+      'password123',
+    );
     await tester.tap(find.widgetWithText(FilledButton, label));
   }
 
@@ -195,7 +209,7 @@ void main() {
     // Switch the gate to "create account".
     await tester.tap(find.text('New here? Create an account'));
     await tester.pump();
-    await submit(tester, label: 'Create account');
+    await submit(tester, label: 'Create account', username: 'guitarjane');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
@@ -204,6 +218,7 @@ void main() {
     // The email and password fields give way to the code entry.
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Resend confirmation email'), findsOneWidget);
+    expect(signUpUsername, 'guitarjane');
   });
 
   testWidgets('a confirmation code signs the member in and closes the sheet', (
@@ -214,7 +229,7 @@ void main() {
     await pumpGate(tester);
     await tester.tap(find.text('New here? Create an account'));
     await tester.pump();
-    await submit(tester, label: 'Create account');
+    await submit(tester, label: 'Create account', username: 'guitarjane');
     await tester.pumpAndSettle();
 
     expect(find.text('6-digit code'), findsOneWidget);
@@ -356,6 +371,7 @@ class _FakeSignInApi implements SignInApi {
   _FakeSignInApi({
     required this.call,
     required this.onResend,
+    required this.onSignUp,
     required this.onReset,
     required this.onUpdatePassword,
     required this.onSignOut,
@@ -363,6 +379,7 @@ class _FakeSignInApi implements SignInApi {
 
   final Future<AuthResponse> Function() call;
   final Future<void> Function(String email) onResend;
+  final void Function(String? username) onSignUp;
   final Future<void> Function(String email) onReset;
   final Future<void> Function(String password) onUpdatePassword;
   final Future<void> Function() onSignOut;
@@ -373,7 +390,14 @@ class _FakeSignInApi implements SignInApi {
   Future<AuthResponse> signIn(String email, String password) => call();
 
   @override
-  Future<AuthResponse> signUp(String email, String password) => call();
+  Future<AuthResponse> signUp(
+    String email,
+    String password, {
+    String? username,
+  }) {
+    onSignUp(username);
+    return call();
+  }
 
   @override
   Future<AuthResponse> signInWithGoogle(String idToken) {

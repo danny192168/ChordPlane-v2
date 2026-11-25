@@ -1,17 +1,11 @@
 import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/auth/auth_gateway.dart';
-import '../../core/auth/google_auth.dart';
 import '../../core/chords/chord_detection.dart';
 import '../../core/config/app_config.dart';
 import '../../core/settings/settings.dart';
-import '../sharing/cloud/auth_gate_sheet.dart';
-import '../songs/data/song_repository.dart';
-import 'network_diagnostics.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -100,7 +94,7 @@ class SettingsScreen extends ConsumerWidget {
           const _SectionLabel('Chord input'),
           _Card(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -111,32 +105,26 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  InputDecorator(
+                  DropdownButtonFormField<ChordDetectionMode>(
+                    initialValue: settings.defaultChordDetectionMode,
+                    isExpanded: true,
                     decoration: const InputDecoration(
-                      isDense: true,
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.fromLTRB(12, 10, 8, 10),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<ChordDetectionMode>(
-                        isExpanded: true,
-                        isDense: true,
-                        value: settings.defaultChordDetectionMode,
-                        items: [
-                          for (final mode in ChordDetectionMode.values)
-                            DropdownMenuItem(
-                              value: mode,
-                              child: Text(mode.label),
-                            ),
-                        ],
-                        onChanged: (mode) {
-                          if (mode == null) return;
-                          controller.setDefaultChordDetectionMode(mode);
-                        },
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
                     ),
+                    items: [
+                      for (final mode in ChordDetectionMode.values)
+                        DropdownMenuItem(value: mode, child: Text(mode.label)),
+                    ],
+                    onChanged: (mode) {
+                      if (mode == null) return;
+                      controller.setDefaultChordDetectionMode(mode);
+                    },
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
                     '${settings.defaultChordDetectionMode.description} '
                     'New songs start with this mode; each song can override '
@@ -218,45 +206,6 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const _SectionLabel('Library'),
-          _Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.auto_awesome_outlined),
-                  title: const Text('Add demo songs'),
-                  subtitle: const Text('Public-domain classics to try the app'),
-                  onTap: () async {
-                    final added = await ref
-                        .read(songRepositoryProvider)
-                        .addDemoSongs();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          added == 0
-                              ? 'Demo songs are already in your library'
-                              : 'Added $added demo songs',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                _AccountTile(),
-                if (kDebugMode) ...[
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.network_check),
-                    title: const Text('Network diagnostics'),
-                    subtitle: const Text('DNS → TCP → HTTPS, with timings'),
-                    onTap: () => NetworkDiagnosticsSheet.show(context),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
           const _SectionLabel('About'),
           _Card(
             child: const Column(
@@ -270,57 +219,6 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AccountTile extends ConsumerWidget {
-  const _AccountTile();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!AppConfig.hasSupabase) {
-      return const ListTile(
-        leading: Icon(Icons.cloud_off_outlined),
-        title: Text('Local mode'),
-        subtitle: Text('Cloud sharing is not enabled in this build.'),
-      );
-    }
-    if (AppConfig.supabaseInitError != null) {
-      return ListTile(
-        leading: const Icon(Icons.cloud_off_outlined),
-        title: const Text('Cloud setup failed'),
-        subtitle: Text(AppConfig.supabaseInitError!),
-      );
-    }
-    final signedIn = ref.watch(signedInProvider).value ?? false;
-    if (!signedIn) {
-      return ListTile(
-        leading: const Icon(Icons.person_add_alt_1_outlined),
-        title: const Text('Sign in'),
-        subtitle: const Text('Needed for cloud share links'),
-        onTap: () => showSignInGate(context),
-      );
-    }
-    final gateway = ref.read(authGatewayProvider);
-    final email = gateway.currentUserEmail ?? 'your account';
-    return ListTile(
-      leading: const Icon(Icons.person_outline),
-      title: Text('Signed in as $email'),
-      subtitle: const Text('Cloud share links enabled'),
-      trailing: TextButton(
-        onPressed: () async {
-          try {
-            await ref.read(signInApiProvider).signOut();
-          } catch (error) {
-            debugPrint('Sign-out failed: $error');
-          }
-          // Clear the Google account too so the next tap shows the picker
-          // instead of silently reusing the previous identity.
-          await ref.read(googleAuthProvider).signOut();
-        },
-        child: const Text('Sign out'),
       ),
     );
   }
@@ -360,9 +258,7 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: scheme.outlineVariant,
-        ),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: child,
     );

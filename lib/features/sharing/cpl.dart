@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 
 import '../../core/chords/chord_detection.dart';
 import '../../core/config/app_config.dart';
+import '../../core/db/app_database.dart';
 
 /// ChordPlane's portable, plain-JSON song/setlist format (`.cpl`).
 ///
@@ -128,6 +129,24 @@ class CplSong {
     if (youtubeUrl.isNotEmpty) 'youtubeUrl': youtubeUrl,
     if (tags.isNotEmpty) 'tags': tags,
   };
+
+  /// Converts a locally saved song into the portable representation used for
+  /// `.cpl` files, share bundles and community uploads.
+  factory CplSong.fromLocal(SongRow song) => CplSong(
+    title: song.title,
+    artist: song.artist,
+    body: song.body,
+    originalKey: song.originalKey,
+    chordDetectionMode: ChordDetectionMode.fromStorage(
+      song.chordDetectionMode,
+    ),
+    capo: song.capo,
+    tempo: song.tempo,
+    instrument: song.instrument,
+    tuning: song.tuning,
+    youtubeUrl: song.youtubeUrl,
+    tags: song.tags,
+  );
 
   static CplSong fromJson(Object? json, {int index = 0}) {
     if (json is! Map) {

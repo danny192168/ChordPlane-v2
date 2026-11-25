@@ -6,13 +6,24 @@ import '../../../shared/widgets/song_tile.dart';
 import '../data/song_providers.dart';
 
 class ArtistScreen extends ConsumerWidget {
-  const ArtistScreen({super.key, required this.slug});
+  const ArtistScreen({
+    super.key,
+    required this.slug,
+    this.favoritesOnly = false,
+    this.savedOnly = false,
+  });
 
   final String slug;
+  final bool favoritesOnly;
+  final bool savedOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final songs = ref.watch(artistSongsProvider(slug));
+    final songs = favoritesOnly
+        ? ref.watch(favoriteArtistSongsProvider(slug))
+        : savedOnly
+        ? ref.watch(savedArtistSongsProvider(slug))
+        : ref.watch(artistSongsProvider(slug));
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -25,7 +36,11 @@ class ArtistScreen extends ConsumerWidget {
                   ? (songs.value!.first.song.artist.trim().isEmpty
                         ? 'Unknown artist'
                         : songs.value!.first.song.artist)
-                  : 'Artist',
+                  : (favoritesOnly
+                        ? 'Favorites'
+                        : savedOnly
+                        ? 'Saved'
+                        : 'Artist'),
             ),
           ),
           songs.when(
@@ -39,11 +54,15 @@ class ArtistScreen extends ConsumerWidget {
             ),
             data: (items) {
               if (items.isEmpty) {
-                return const SliverFillRemaining(
+                return SliverFillRemaining(
                   hasScrollBody: false,
                   child: SongListEmpty(
                     title: 'No songs found',
-                    message: 'This artist has no songs in your library.',
+                    message: favoritesOnly
+                        ? 'No hearted songs by this artist yet.'
+                        : savedOnly
+                        ? 'No saved songs by this artist yet.'
+                        : 'This artist has no songs in your library.',
                   ),
                 );
               }

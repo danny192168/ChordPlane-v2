@@ -6,12 +6,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'app/deep_links.dart';
+import 'app/incoming_files.dart';
 import 'app/router.dart';
 import 'core/config/app_config.dart';
 import 'core/settings/settings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initialiseIncomingFiles();
 
   final preferences = await SharedPreferences.getInstance();
   final initialRoute = routeForIncomingLink(

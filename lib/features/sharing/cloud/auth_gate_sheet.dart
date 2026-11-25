@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/auth/auth_gateway.dart';
 import '../../../core/auth/google_auth.dart';
 import '../../../core/config/app_config.dart';
+import '../../community/data/community_api.dart';
 import 'auth_api.dart';
 import 'auth_throttle.dart';
 import 'auth_widgets.dart';
@@ -38,11 +39,13 @@ class _SignInGate extends ConsumerStatefulWidget {
 class _SignInGateState extends ConsumerState<_SignInGate> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _username = TextEditingController();
   final _code = TextEditingController();
   bool _createAccount = false;
   bool _busy = false;
   bool _verifyingCode = false;
   String? _emailError;
+  String? _usernameError;
   String? _passwordError;
   String? _codeError;
   String? _message;
@@ -69,6 +72,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _username.dispose();
     _code.dispose();
     super.dispose();
   }
@@ -177,6 +181,23 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
                       errorText: _emailError,
                     ),
                   ),
+                  if (_createAccount) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _username,
+                      enabled: !_busy,
+                      autocorrect: false,
+                      textCapitalization: TextCapitalization.none,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        hintText: 'guitarjane',
+                        prefixText: '@',
+                        errorText: _usernameError,
+                        helperText: '3–20 letters, numbers or underscores',
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   PasswordField(
                     controller: _password,
@@ -283,6 +304,7 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
                         _message = null;
                         _confirmationEmail = null;
                         _emailError = null;
+                        _usernameError = null;
                         _passwordError = null;
                       }),
                 child: Text(
@@ -342,14 +364,22 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
     final emailProblem = isPlausibleEmail(email)
         ? null
         : 'Enter a valid email address.';
+    final username = _username.text.trim().toLowerCase();
+    final usernameProblem = _createAccount &&
+            !RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(username)
+        ? 'Use 3–20 letters, numbers or underscores.'
+        : null;
     final passwordProblem = password.isEmpty
         ? 'Enter your password.'
         : _createAccount && password.length < minPasswordLength
         ? 'Password needs at least $minPasswordLength characters.'
         : null;
-    if (emailProblem != null || passwordProblem != null) {
+    if (emailProblem != null ||
+        usernameProblem != null ||
+        passwordProblem != null) {
       setState(() {
         _emailError = emailProblem;
+        _usernameError = usernameProblem;
         _passwordError = passwordProblem;
         _message = null;
       });
@@ -358,6 +388,27 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
     if (AppConfig.supabaseInitError != null) {
       _show(AppConfig.supabaseInitError!);
       return;
+    }
+    if (_createAccount && AppConfig.hasSupabase) {
+      // Fail early with a readable message. The database still enforces
+      // uniqueness via the profile index if this check is unavailable.
+      try {
+        final check = await ref.read(communityApiProvider).checkUsername(
+          username,
+        );
+        if (check['available'] != true) {
+          if (!mounted) return;
+          setState(() {
+            _usernameError =
+                (check['reason'] as String?) ?? 'That username is taken.';
+          });
+          return;
+        }
+      } catch (_) {
+        // An older project without migration 0002 cannot check here; the
+        // sign-up trigger will simply store no username until the migration
+        // is applied.
+      }
     }
     // Read before any await so this still works if the sheet is dismissed.
     final throttle = ref.read(authThrottleProvider);
@@ -376,12 +427,15 @@ class _SignInGateState extends ConsumerState<_SignInGate> {
       _busy = true;
       _message = null;
       _emailError = null;
+      _usernameError = null;
       _passwordError = null;
       _confirmationEmail = null;
     });
     try {
       if (_createAccount) {
-        final response = await authCall(() => _api.signUp(email, password));
+        final response = await authCall(
+          () => _api.signUp(email, password, username: username),
+        );
         if (!mounted) return;
         if (response.session == null) {
           _showConfirmation(email);

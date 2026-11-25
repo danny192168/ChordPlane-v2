@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -14,12 +15,21 @@ import 'cloud/share_cloud.dart';
 import 'share_service.dart';
 
 class ImportScreen extends ConsumerStatefulWidget {
-  const ImportScreen({super.key, this.initialCode, this.initialToken});
+  const ImportScreen({
+    super.key,
+    this.initialCode,
+    this.initialToken,
+    this.initialFilePath,
+  });
 
   final String? initialCode;
 
   /// Token of a server-backed share (`/s/<token>` links arrive here).
   final String? initialToken;
+
+  /// A `.cpl` file handed to the app by Android's "open with" / share sheet.
+  /// The native side copies the content URI into our cache before calling in.
+  final String? initialFilePath;
 
   @override
   ConsumerState<ImportScreen> createState() => _ImportScreenState();
@@ -35,6 +45,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   @override
   void initState() {
     super.initState();
+    final path = widget.initialFilePath?.trim();
+    if (path != null && path.isNotEmpty) {
+      _loadFilePath(path);
+      return;
+    }
     final token = widget.initialToken?.trim();
     if (token != null && token.isNotEmpty) {
       _fetchServerShare(token);
@@ -250,6 +265,29 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       });
     } finally {
       setState(() => _busy = false);
+    }
+  }
+
+  /// Decodes a file opened through Android's "open with" chooser using the
+  /// same `.cpl` decoder as the in-app file picker.
+  Future<void> _loadFilePath(String path) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final bytes = await File(path).readAsBytes();
+      _loadJson(utf8.decode(bytes));
+    } on FileSystemException {
+      if (mounted) setState(() => _error = 'That file could not be read.');
+    } on FormatException {
+      if (mounted) {
+        setState(() => _error = 'That file is not a ChordPlane document.');
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Could not read that file: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 

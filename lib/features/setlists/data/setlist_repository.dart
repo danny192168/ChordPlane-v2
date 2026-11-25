@@ -9,7 +9,7 @@ import '../../songs/data/song_repository.dart';
 final setlistRepositoryProvider = Provider<SetlistRepository>((ref) {
   return SetlistRepository(
     db: ref.watch(databaseProvider),
-    userId: ref.watch(currentUserIdProvider),
+    userId: ref.watch(currentUserIdProvider).value ?? 'local-user',
   );
 });
 

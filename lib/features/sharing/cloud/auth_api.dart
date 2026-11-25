@@ -28,7 +28,13 @@ final authClientProvider = Provider<GoTrueClient>((ref) {
 abstract interface class SignInApi {
   Future<AuthResponse> signIn(String email, String password);
 
-  Future<AuthResponse> signUp(String email, String password);
+  /// [username] is stored in auth metadata so the profile trigger can credit
+  /// community uploads with a unique name from the first sign-in.
+  Future<AuthResponse> signUp(
+    String email,
+    String password, {
+    String? username,
+  });
 
   /// Exchanges a native Google ID token for a Supabase session.
   Future<AuthResponse> signInWithGoogle(String idToken);
@@ -72,10 +78,17 @@ class SupabaseSignInApi implements SignInApi {
       _auth.signInWithPassword(email: email, password: password);
 
   @override
-  Future<AuthResponse> signUp(String email, String password) => _auth.signUp(
+  Future<AuthResponse> signUp(
+    String email,
+    String password, {
+    String? username,
+  }) => _auth.signUp(
     email: email,
     password: password,
     emailRedirectTo: AppConfig.emailConfirmUrl,
+    data: username == null || username.trim().isEmpty
+        ? null
+        : <String, dynamic>{'username': username.trim().toLowerCase()},
   );
 
   @override
