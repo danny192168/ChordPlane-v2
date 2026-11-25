@@ -1,8 +1,11 @@
 <svg viewBox="0 0 680 680" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
   <!-- Foreground only (no background) for Android adaptive launcher icons.
-       The wing graphic spans the 66% safe zone of the 108dp canvas. -->
-  <path d="M281,382 L278,466 L565,134 Z" style="fill:#1d8581;fill-rule:nonzero;"></path>
-  <path d="M323,414 L278,466 L565,134 Z" style="fill:#1d8581;fill-rule:nonzero;"></path>
-  <path d="M565,134 L115,314 L281,382 Z" style="fill:#5dd3cf;fill-rule:nonzero;"></path>
-  <path d="M565,134 L323,414 L466,546 Z" style="fill:#2BAFAB;fill-rule:nonzero;"></path>
+       The wing graphic sits inside the 66% safe zone of the 108dp canvas,
+       with a little extra breathing room. -->
+  <g transform="translate(340 340) scale(0.92) translate(-340 -340)">
+    <path d="M281,382 L278,466 L565,134 Z" style="fill:#1d8581;fill-rule:nonzero;"></path>
+    <path d="M323,414 L278,466 L565,134 Z" style="fill:#1d8581;fill-rule:nonzero;"></path>
+    <path d="M565,134 L115,314 L281,382 Z" style="fill:#5dd3cf;fill-rule:nonzero;"></path>
+    <path d="M565,134 L323,414 L466,546 Z" style="fill:#2BAFAB;fill-rule:nonzero;"></path>
+  </g>
 </svg>
