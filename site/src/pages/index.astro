@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import ReleaseInfo from '../components/ReleaseInfo.astro';
 import ScreenshotShowcase from '../components/ScreenshotShowcase.astro';
+import ShotThemeSwitch from '../components/ShotThemeSwitch.astro';
 import Sheet from '../components/Sheet.astro';
 
 const jsonLd = {
@@ -21,7 +22,7 @@ const jsonLd = {
 
 <Base
   title="ChordPlane — a guitar-first chord and lyric songbook"
-  description="Chords above lyrics, transpose in any key, chord diagrams and set lists. Songs stay on your device; the cloud only appears when you share a link."
+  description="Chords above lyrics, transpose in any key, chord diagrams and set lists you can share as a QR code, link or file. Songs stay on your device; the cloud only appears when you share."
   jsonLd={jsonLd}
 >
   <section class="wrap hero">
@@ -30,9 +31,10 @@ const jsonLd = {
       <h1>Your set list, ready <em>before the first chord.</em></h1>
       <p class="lede">
         ChordPlane keeps chords above the words they belong to, moves a song
-        into any key without turning it unreadable, and shows the voicing while
-        you play. The library is a file on your phone; the cloud only appears
-        when you choose to share.
+        into any key without turning it unreadable, shows the voicing while you
+        play, and sends a whole set list to bandmates as a QR code, link or file.
+        The library is a file on your phone; the cloud only appears when you
+        choose to share.
       </p>
 
       <div class="actions">
@@ -68,6 +70,9 @@ const jsonLd = {
       <p>
         No account wall, no sync spinner, no menu between you and the song.
       </p>
+      <div class="shot-theme-row">
+        <ShotThemeSwitch />
+      </div>
     </div>
 
     <div class="feature-grid">
@@ -97,6 +102,14 @@ const jsonLd = {
         <p>
           Group songs, drag them into the running order, and open the next one
           with a tap. Nothing here needs a connection.
+        </p>
+      </article>
+      <article>
+        <h3>Send the set to everyone else</h3>
+        <p>
+          Share a whole set list as a QR code, a link, or a <code>.cpl</code> file.
+          Bandmates get the running order and the chords — not your library.
+          Cloud links are optional and can be deleted later.
         </p>
       </article>
     </div>
@@ -145,8 +158,8 @@ const jsonLd = {
         you and deleted later.
       </li>
       <li>
-        A share link stores exactly the sheet you sent, not the rest of your
-        library.
+        A share link stores exactly the song or set list you sent, not the rest
+        of your library.
       </li>
       <li>
         Google sign-in receives only your email address, name and profile

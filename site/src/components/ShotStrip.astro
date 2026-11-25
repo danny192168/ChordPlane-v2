@@ -1,19 +1,52 @@
 ---
 import PhoneFrame from './PhoneFrame.astro';
 import Screenshot from './Screenshot.astro';
+import ShotThemeSwitch from './ShotThemeSwitch.astro';
 
 import viewer from '../assets/screenshots/song-viewer.png';
+import viewerDark from '../assets/screenshots/song-viewer-dark.png';
 import transpose from '../assets/screenshots/transpose.png';
+import transposeDark from '../assets/screenshots/transpose-dark.png';
 import diagrams from '../assets/screenshots/diagrams.png';
+import diagramsDark from '../assets/screenshots/diagrams-dark.png';
 import setlist from '../assets/screenshots/setlist-detail.png';
+import setlistDark from '../assets/screenshots/setlist-detail-dark.png';
+import share from '../assets/screenshots/share-setlist.png';
+import shareDark from '../assets/screenshots/share-setlist-dark.png';
 import artists from '../assets/screenshots/artists.png';
+import artistsDark from '../assets/screenshots/artists-dark.png';
 
 const shots = [
-  { image: viewer, caption: 'Chords sit above the syllable you play them on.' },
-  { image: transpose, caption: 'Move a song into any key, capo hint included.' },
-  { image: diagrams, caption: 'Guitar and ukulele voicings, drawn on the device.' },
-  { image: setlist, caption: 'Set lists keep the running order for the night.' },
-  { image: artists, caption: 'Artists group the library without folders.' },
+  {
+    image: viewer,
+    darkImage: viewerDark,
+    caption: 'Chords sit above the syllable you play them on.',
+  },
+  {
+    image: transpose,
+    darkImage: transposeDark,
+    caption: 'Move a song into any key, capo hint included.',
+  },
+  {
+    image: diagrams,
+    darkImage: diagramsDark,
+    caption: 'Guitar and ukulele voicings, drawn on the device.',
+  },
+  {
+    image: setlist,
+    darkImage: setlistDark,
+    caption: 'Set lists keep the running order for the night.',
+  },
+  {
+    image: share,
+    darkImage: shareDark,
+    caption: 'Send the whole set list as a QR code, a link or a .cpl file.',
+  },
+  {
+    image: artists,
+    darkImage: artistsDark,
+    caption: 'Artists group the library without folders.',
+  },
 ];
 ---
 
@@ -22,10 +55,11 @@ const shots = [
     <div>
       <h2 id="shots-title">A look at the app</h2>
       <p class="fine-print" style="margin-top: 8px">
-        Every screen below is a real capture from the Android build. Tap one to
-        enlarge it.
+        Real captures from the Android build. Tap one to enlarge it, and switch
+        the preview to see them in light or dark.
       </p>
     </div>
+    <ShotThemeSwitch />
     <div class="strip-nav">
       <button type="button" data-strip="prev" aria-label="Previous screenshots">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -48,14 +82,16 @@ const shots = [
             class="shot-zoom"
             type="button"
             data-shot-zoom
-            data-full={shot.image.src}
+            data-full-light={shot.image.src}
+            data-full-dark={shot.darkImage.src}
             data-caption={shot.caption}
             aria-label={`Enlarge screenshot: ${shot.caption}`}
           >
             <PhoneFrame size="small">
               <Screenshot
                 src={shot.image}
-                alt=""
+                darkSrc={shot.darkImage}
+                alt={shot.caption}
                 sizes="(min-width: 900px) 264px, 62vw"
                 widths={[264, 400, 528]}
               />
@@ -106,17 +142,31 @@ const shots = [
 
   let lastTrigger: HTMLButtonElement | null = null;
 
+  const fullFor = (trigger: HTMLButtonElement) => {
+    const mode = document.documentElement.dataset.shotTheme === 'dark' ? 'dark' : 'light';
+    return mode === 'dark' ? trigger.dataset.fullDark : trigger.dataset.fullLight;
+  };
+
+  const showCurrent = () => {
+    if (!dialogImage || !lastTrigger) return;
+    dialogImage.src = fullFor(lastTrigger) ?? '';
+  };
+
   if (dialog && dialogImage && dialogCaption) {
     triggers.forEach((trigger) => {
       trigger.addEventListener('click', () => {
         lastTrigger = trigger;
-        dialogImage.src = trigger.dataset.full ?? '';
-        dialogImage.alt = trigger.dataset.caption ?? '';
-        dialogCaption.textContent = trigger.dataset.caption ?? '';
+        showCurrent();
+        const caption = trigger.dataset.caption ?? '';
+        dialogImage.alt = caption;
+        dialogCaption.textContent = caption;
         dialog.showModal();
         document.documentElement.classList.add('lightbox-open');
       });
     });
+
+    // Keep an open zoomed screenshot in step with the preview switch.
+    window.addEventListener('chordplane:shot-theme', showCurrent);
 
     dialog.addEventListener('close', () => {
       document.documentElement.classList.remove('lightbox-open');

@@ -2,40 +2,60 @@
 import Screenshot from './Screenshot.astro';
 
 import viewer from '../assets/screenshots/song-viewer.png';
+import viewerDark from '../assets/screenshots/song-viewer-dark.png';
 import transpose from '../assets/screenshots/transpose.png';
+import transposeDark from '../assets/screenshots/transpose-dark.png';
 import diagrams from '../assets/screenshots/diagrams.png';
+import diagramsDark from '../assets/screenshots/diagrams-dark.png';
 import setlist from '../assets/screenshots/setlist-detail.png';
+import setlistDark from '../assets/screenshots/setlist-detail-dark.png';
+import share from '../assets/screenshots/share-setlist.png';
+import shareDark from '../assets/screenshots/share-setlist-dark.png';
 import artists from '../assets/screenshots/artists.png';
+import artistsDark from '../assets/screenshots/artists-dark.png';
 
-// The same five screens feed the desktop rows and the mobile card strip.
-// Copy lives here so both layouts stay in step.
+// The same six screens feed the fan, the desktop rows and the mobile card
+// strip. Each has a light and dark capture; the preview switch below the
+// Features heading swaps them all at once.
 const screens = [
   {
     image: viewer,
+    darkImage: viewerDark,
     title: 'Chords above the words',
     body: 'Every chord sits over the syllable you play it on, so the line stays readable while you sing.',
     alt: 'Song view with chords printed above the lyrics',
   },
   {
     image: transpose,
+    darkImage: transposeDark,
     title: 'Any key, capo included',
     body: 'Shift a song by up to eleven semitones and the chords, capo hint and diagrams move together.',
     alt: 'Transpose sheet open over a song',
   },
   {
     image: diagrams,
+    darkImage: diagramsDark,
     title: 'Voicings on the device',
     body: 'Tap a chord for guitar or ukulele shapes. The diagrams are drawn locally, so they work offline.',
     alt: 'Chord diagrams listed for a song',
   },
   {
     image: setlist,
+    darkImage: setlistDark,
     title: 'A running order for the night',
     body: 'Group songs into a set, drag them into order, and open the next one with a tap.',
     alt: 'A set list with songs in running order',
   },
   {
+    image: share,
+    darkImage: shareDark,
+    title: 'Send the whole set',
+    body: 'Share a set list as a QR code, a link or a .cpl file. Your bandmates get the set, not your library.',
+    alt: 'Share sheet for a set list with a QR code and link options',
+  },
+  {
     image: artists,
+    darkImage: artistsDark,
     title: 'The library organizes itself',
     body: 'Artists group songs without folders, and a few letters of a title are enough to find one.',
     alt: 'Artist page listing the songs by that artist',
@@ -52,10 +72,11 @@ const screens = [
           <div class="fan-frame">
             <Screenshot
               src={screen.image}
+              darkSrc={screen.darkImage}
               alt=""
               sizes="(min-width: 900px) 180px, 1px"
               widths={[320, 480, 640]}
-              eager={index === 2}
+              eager={index === 2 || index === 3}
             />
           </div>
         </div>
@@ -71,7 +92,8 @@ const screens = [
       <h2 id="screens-title">Every screen, up close.</h2>
       <p class="screen-lede">
         Real captures from the Android build — what each screen is for, and
-        where you'll use it.
+        where you'll use it. Use the preview switch in Features below to see
+        every screen in light or dark.
       </p>
     </header>
 
@@ -82,6 +104,7 @@ const screens = [
             <div class="screen-frame">
               <Screenshot
                 src={screen.image}
+                darkSrc={screen.darkImage}
                 alt={screen.alt}
                 sizes="(min-width: 900px) 248px, 1px"
                 widths={[320, 480, 640]}
@@ -102,6 +125,7 @@ const screens = [
           <div class="screen-frame">
             <Screenshot
               src={screen.image}
+              darkSrc={screen.darkImage}
               alt={screen.alt}
               sizes="(min-width: 900px) 1px, 72vw"
               widths={[320, 480, 640]}

@@ -73,8 +73,13 @@ const ogImage = new URL('/og.png', Astro.site).href;
         if (saved === 'light' || saved === 'dark') {
           document.documentElement.dataset.theme = saved;
         }
+        // The screenshot preview has its own theme, independent of the page.
+        const shot = localStorage.getItem('chordplane-shot-theme');
+        if (shot === 'light' || shot === 'dark') {
+          document.documentElement.dataset.shotTheme = shot;
+        }
       } catch (_) {
-        /* Private mode without storage: stay on the system theme. */
+        /* Private mode without storage: stay on the defaults. */
       }
     </script>
 

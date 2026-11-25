@@ -1,0 +1,75 @@
+---
+interface Props {
+  /** Small label shown in front of the segmented control. */
+  label?: string;
+  class?: string;
+}
+
+const { label = 'Preview', class: className } = Astro.props;
+---
+
+<div
+  class:list={['shot-theme', className]}
+  role="group"
+  aria-label="Screenshot theme"
+  data-shot-theme-control
+>
+  <span class="shot-theme-label">{label}</span>
+  <div class="shot-theme-segments">
+    <button type="button" data-shot-theme-option="dark" aria-pressed="false">
+      Dark
+    </button>
+    <button type="button" data-shot-theme-option="light" aria-pressed="true">
+      Light
+    </button>
+  </div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const buttons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-shot-theme-option]'),
+  );
+
+  const current = () => (root.dataset.shotTheme === 'dark' ? 'dark' : 'light');
+
+  const paint = () => {
+    const mode = current();
+
+    buttons.forEach((button) =>
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset.shotThemeOption === mode),
+      ),
+    );
+
+    document.querySelectorAll<HTMLElement>('[data-shot-pair]').forEach((pair) => {
+      pair.querySelectorAll<HTMLElement>('[data-shot-layer]').forEach((layer) => {
+        const active = layer.dataset.shotLayer === mode;
+        layer.setAttribute('aria-hidden', String(!active));
+        const image = layer.querySelector('img');
+        if (image) image.alt = active ? (pair.dataset.shotAlt ?? '') : '';
+      });
+    });
+
+    document.dispatchEvent(
+      new CustomEvent('chordplane:shot-theme', { detail: { mode } }),
+    );
+  };
+
+  buttons.forEach((button) =>
+    button.addEventListener('click', () => {
+      const mode = button.dataset.shotThemeOption;
+      if (mode !== 'light' && mode !== 'dark') return;
+      root.dataset.shotTheme = mode;
+      try {
+        localStorage.setItem('chordplane-shot-theme', mode);
+      } catch (_) {
+        /* Storage is optional; the control still works for this page. */
+      }
+      paint();
+    }),
+  );
+
+  paint();
+</script>

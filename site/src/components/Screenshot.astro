@@ -3,6 +3,8 @@ import { Picture } from 'astro:assets';
 
 interface Props {
   src: ImageMetadata;
+  /** Matching capture in the other app theme. Omit for single-theme images. */
+  darkSrc?: ImageMetadata;
   alt: string;
   sizes?: string;
   widths?: number[];
@@ -12,22 +14,44 @@ interface Props {
 
 const {
   src,
+  darkSrc,
   alt,
   sizes = '(min-width: 900px) 380px, (min-width: 560px) 60vw, 82vw',
   widths = [360, 540, 720, 1080],
   eager = false,
   class: className,
 } = Astro.props;
+
+// Both layers are rendered so switching themes is a crossfade, not a network
+// round trip. Only the active one is exposed to assistive technology.
+const layers = darkSrc
+  ? [
+      { theme: 'light', image: src },
+      { theme: 'dark', image: darkSrc },
+    ]
+  : [{ theme: 'light', image: src }];
 ---
 
-<Picture
-  class:list={['shot-img', className]}
-  src={src}
-  alt={alt}
-  widths={widths}
-  sizes={sizes}
-  formats={['avif', 'webp']}
-  loading={eager ? 'eager' : 'lazy'}
-  decoding={eager ? 'sync' : 'async'}
-  fetchpriority={eager ? 'high' : 'auto'}
-/>
+<span
+  class:list={['shot-pair', className]}
+  data-shot-pair
+  data-shot-alt={alt}
+>
+  {
+    layers.map(({ theme, image }) => (
+      <span class="shot-layer" data-shot-layer={theme} aria-hidden={theme === 'dark' ? 'true' : undefined}>
+        <Picture
+          class="shot-img"
+          src={image}
+          alt={theme === 'dark' ? '' : alt}
+          widths={widths}
+          sizes={sizes}
+          formats={['avif', 'webp']}
+          loading={eager ? 'eager' : 'lazy'}
+          decoding={eager ? 'sync' : 'async'}
+          fetchpriority={eager ? 'high' : 'auto'}
+        />
+      </span>
+    ))
+  }
+</span>
