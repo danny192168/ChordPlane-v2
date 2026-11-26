@@ -1,0 +1,158 @@
+---
+import Base from '../layouts/Base.astro';
+import Sheet from '../components/Sheet.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Can ChordPlane open ChordPro files?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Paste ChordPro text into the song editor. Bracketed chords, section directives, capo and tempo are recognized and laid out as a readable chord sheet.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Does it also read plain chord rows?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Alongside ChordPro, ChordPlane recognizes bare chord rows above lyrics and angle-wrapped chord groups. You can choose the detection mode per song.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Is the ChordPro text uploaded?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. Import and rendering happen on the device. Nothing is uploaded to read a sheet.',
+      },
+    },
+  ],
+};
+---
+
+<Base
+  title="ChordPro reader for Android | ChordPlane"
+  description="Paste ChordPro chord sheets into ChordPlane and read them offline with chords above the lyrics. Sections, capo and tempo stay intact."
+  jsonLd={jsonLd}
+>
+  <section class="wrap hero">
+    <div class="hero-inner">
+      <p class="screen-kicker">ChordPro reader</p>
+      <h1>ChordPro in, playable sheet out.</h1>
+      <p class="lede">
+        ChordPlane reads the ChordPro sheets you already have. Bracketed chords,
+        section labels, capo notes and tempo markers survive the import and
+        appear as a clean sheet you can play from offline.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="#example">See an example</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap import-section" id="example" aria-labelledby="chordpro-example-title">
+    <div class="import-copy">
+      <h2 id="chordpro-example-title">Paste the text, keep the structure</h2>
+      <p style="margin-top: 14px; color: var(--ink-soft)">
+        A typical ChordPro export is compact but hard to read on a phone.
+        ChordPlane parses the markers and positions the chords over the words,
+        while leaving the original source available for editing.
+      </p>
+      <ul class="import-list">
+        <li><code>[G]</code> and <code>[Am]</code> inline chords</li>
+        <li><code>&lbrace;start_of_verse: Verse 1&rbrace;</code> and section names</li>
+        <li><code>&lbrace;capo: 2&rbrace;</code> and <code>&lbrace;tempo: 92&rbrace;</code></li>
+        <li>Repeat annotations such as <code>[G(2X)]</code></li>
+      </ul>
+      <a class="text-link" href="/offline-guitar-chords/">Why offline matters →</a>
+    </div>
+    <div class="import-sheet"><Sheet /></div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="modes-title">
+    <div class="section-head">
+      <h2 id="modes-title">One app, several chord formats</h2>
+      <p>
+        Chord sheets in the wild are inconsistent. Each song can choose how its
+        chords should be detected.
+      </p>
+    </div>
+    <div class="feature-grid">
+      <article>
+        <h3>Auto</h3>
+        <p>
+          Reads ChordPro brackets, angle-wrapped groups and bare chord rows.
+          Good default for mixed collections.
+        </p>
+      </article>
+      <article>
+        <h3>Ultimate Guitar</h3>
+        <p>
+          Keeps the conventions used by tab sites, including their section
+          headers and chord placement.
+        </p>
+      </article>
+      <article>
+        <h3>Brackets only</h3>
+        <p>
+          Reads <code>[Am]</code> and <code>&lt;G D&gt;</code> while leaving
+          ordinary lyric text untouched.
+        </p>
+      </article>
+      <article>
+        <h3>ChordPro only</h3>
+        <p>
+          Strict ChordPro parsing for sheets that should never be rewritten.
+          Nothing else is treated as a chord.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="chordpro-faq-title">
+    <div class="section-head">
+      <h2 id="chordpro-faq-title">ChordPro questions</h2>
+    </div>
+    <ul class="points">
+      <li>
+        <h3>Can ChordPlane open ChordPro files?</h3>
+        <p>
+          Yes. Paste the text into the editor. Sections and chord positions are
+          preserved in the readable sheet.
+        </p>
+      </li>
+      <li>
+        <h3>Does it also read plain chord rows?</h3>
+        <p>
+          Yes. Detection is per song, so a strict ChordPro sheet and a
+          rough-and-ready pasted chord row can live side by side.
+        </p>
+      </li>
+      <li>
+        <h3>Is the sheet uploaded?</h3>
+        <p>
+          No. Import, storage and rendering happen on the device. Cloud features
+          are opt-in only.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="wrap" style="padding-block: clamp(44px, 6vw, 80px)">
+    <div class="get-card">
+      <div>
+        <h2>Read your sheets offline.</h2>
+        <p>One signed APK, Android 7.0 or newer. Your library stays on the phone.</p>
+      </div>
+      <div class="get-actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="/transpose-chords/">See transposing</a>
+      </div>
+    </div>
+  </section>
+</Base>

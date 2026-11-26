@@ -1,0 +1,192 @@
+---
+import Base from '../layouts/Base.astro';
+import Screenshot from '../components/Screenshot.astro';
+import viewer from '../assets/screenshots/song-viewer.png';
+import viewerDark from '../assets/screenshots/song-viewer-dark.png';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Does ChordPlane need an internet connection to read chords?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. Songs, chord diagrams, transposition and set lists are stored and rendered on the device. The connection is only used when you explicitly search the shared catalog or create a cloud share link.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can I import chord sheets I already have?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Paste ChordPro with [G] brackets, a plain chord row above the lyrics, or text copied from a message. ChordPlane keeps sections, capo and tempo.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Will an account be required?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. The app is fully usable as a guest. An account is only needed for cloud share links you can manage and delete later.',
+      },
+    },
+  ],
+};
+---
+
+<Base
+  title="Offline guitar chords for Android | ChordPlane"
+  description="Keep guitar chord sheets on your Android phone, transpose in any key and read them offline. No account needed. Download the signed APK."
+  jsonLd={jsonLd}
+>
+  <section class="wrap hero">
+    <div class="hero-inner">
+      <p class="screen-kicker">Offline guitar chords</p>
+      <h1>Your chord sheets, readable when the signal is not.</h1>
+      <p class="lede">
+        ChordPlane is an offline guitar chord app for Android. It keeps the
+        songs you paste on the device, lays chords above the words they belong
+        to, and renders diagrams locally. No account wall, no loading spinner,
+        no server between you and the next song.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="#faq">Read the details</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="why-offline-title">
+    <div class="section-head">
+      <h2 id="why-offline-title">Why offline matters at a gig</h2>
+      <p>
+        A setlist app that needs a connection is a liability in a basement
+        venue, on a train, or anywhere the band plays louder than the router.
+      </p>
+    </div>
+    <div class="feature-grid">
+      <article>
+        <h3>Open the song instantly</h3>
+        <p>
+          Every saved song is a local database row. Tapping a title opens the
+          sheet immediately, whether the phone has full signal, no signal, or
+          airplane mode enabled.
+        </p>
+      </article>
+      <article>
+        <h3>Read chords above the lyric</h3>
+        <p>
+          Chords sit over the syllable you play them on instead of being buried
+          in a wall of text. Long lines wrap without losing the chord position.
+        </p>
+      </article>
+      <article>
+        <h3>Tap a chord for a voicing</h3>
+        <p>
+          Guitar and ukulele diagrams are drawn on the device. There is no
+          image CDN to wait for when you need to check an F#m shape.
+        </p>
+      </article>
+      <article>
+        <h3>Keep the running order</h3>
+        <p>
+          Build a set, drag it into order, and move through the night with a
+          tap. The set itself stays on the phone too.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section wrap import-section" aria-labelledby="paste-title">
+    <div class="import-copy">
+      <h2 id="paste-title">Bring the sheets you already use</h2>
+      <p style="margin-top: 14px; color: var(--ink-soft)">
+        You do not need to retype anything into a special format. ChordPlane
+        recognizes chordPro brackets, bare chord rows, section labels and the
+        usual capo and tempo notes. Paste once, then play from it.
+      </p>
+      <ul class="import-list">
+        <li>ChordPro: <code>[G]</code> inline with the lyric</li>
+        <li>Bare chord rows above the matching lyric line</li>
+        <li>Angle-wrapped groups such as <code>&lt;G D Em C&gt;</code></li>
+        <li>Sections, repeats, capo and BPM</li>
+      </ul>
+      <a class="text-link" href="/chordpro-reader/">See the ChordPro guide →</a>
+    </div>
+    <div class="import-sheet">
+      <Screenshot
+        src={viewer}
+        darkSrc={viewerDark}
+        alt="ChordPlane song view with chords printed above lyrics"
+      />
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="sharing-title">
+    <div class="section-head">
+      <h2 id="sharing-title">Offline by default, social when you choose</h2>
+      <p>
+        The library never uploads itself. Sharing is an explicit action that
+        sends only the song or set you pick.
+      </p>
+    </div>
+    <div class="statement">
+      <p>
+        A cloud link is optional. When you create one, the recipient receives a
+        snapshot of that setlist — not your whole library — and you can revoke
+        the link later.
+      </p>
+      <footer>
+        <a class="text-link" href="/setlist-sharing/">How setlist sharing works →</a>
+      </footer>
+    </div>
+  </section>
+
+  <section class="section wrap" id="faq" aria-labelledby="offline-faq-title">
+    <div class="section-head">
+      <h2 id="offline-faq-title">Questions about offline chords</h2>
+    </div>
+    <ul class="points">
+      <li>
+        <h3>Does ChordPlane need an internet connection to read chords?</h3>
+        <p>
+          No. Songs, diagrams and transposition are handled on the device. The
+          connection is only used when you search the shared catalog or create
+          a cloud share link.
+        </p>
+      </li>
+      <li>
+        <h3>Can I import chord sheets I already have?</h3>
+        <p>
+          Yes. Paste ChordPro, a plain chord row, or text copied from a message.
+          Sections, capo and tempo are kept.
+        </p>
+      </li>
+      <li>
+        <h3>Will an account be required?</h3>
+        <p>
+          No. Guest mode is the default. An account is only for cloud share
+          links you can manage and delete later.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="wrap" style="padding-block: clamp(44px, 6vw, 80px)">
+    <div class="get-card">
+      <div>
+        <h2>Put the songs in your pocket.</h2>
+        <p>
+          One signed APK, Android 7.0 or newer. Updates install over the old
+          build and keep your songs.
+        </p>
+      </div>
+      <div class="get-actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="/transpose-chords/">Next: transposing</a>
+      </div>
+    </div>
+  </section>
+</Base>

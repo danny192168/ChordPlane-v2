@@ -2,11 +2,67 @@
 import Base from '../layouts/Base.astro';
 import ReleaseInfo from '../components/ReleaseInfo.astro';
 import ShotStrip from '../components/ShotStrip.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'SoftwareApplication',
+      name: 'ChordPlane',
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem: 'Android 7.0+',
+      url: 'https://chordplane.citcs.site/download/',
+      downloadUrl:
+        'https://github.com/danny192168/ChordPlane-v2/releases/latest/download/chordplane-latest.apk',
+      description:
+        'A guitar-first chord and lyric songbook for Android. Chords sit above the lyrics, songs transpose into any key, and the library stays on the device.',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'Will updating erase my songs?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'No. Installing a newer APK replaces the app but leaves its data alone, so your library and set lists carry over.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Do I need an account?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'No account is needed to use ChordPlane. Signing in is only needed to create share links you can manage and delete later.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Is there an iPhone version?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Not yet. The Android build is the only one published so far.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Can I verify the download?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes. The checksum link on this page gives the SHA-256 of the published APK.',
+          },
+        },
+      ],
+    },
+  ],
+};
 ---
 
 <Base
   title="Download ChordPlane for Android"
   description="Download the signed ChordPlane APK. Android 7.0 or newer, free, and updates install over the old build without touching your songs."
+  jsonLd={jsonLd}
 >
   <section class="wrap page-head">
     <h1>Get ChordPlane for Android</h1>

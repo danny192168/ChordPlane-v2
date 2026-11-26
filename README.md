@@ -311,6 +311,12 @@ The `/s/*` rewrite lives in `deploy/vercel.json`, so it is versioned here and
 copied into the deploy root by the workflow. Without it, a share link lands on
 the marketing page instead of the viewer.
 
+Search-engine files are generated during `npm run build`: `@astrojs/sitemap`
+writes `sitemap-index.xml` and `sitemap-0.xml`, and `scripts/generate-seo.mjs`
+publishes the index as the stable `/sitemap.xml`. Utility pages (`/og/`,
+`/auth/confirm`, `404`) are filtered out. The deploy workflow also submits the
+public URLs to IndexNow using the key file in `site/public/`.
+
 ## Android releases and the download page
 
 The download page lives at <https://chordplane.citcs.site/download>. It is one

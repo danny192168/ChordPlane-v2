@@ -91,3 +91,33 @@ jobs:
             git commit -m "Deploy web viewer from ${GITHUB_SHA::7}"
             git push origin main
           fi
+
+      - name: Notify IndexNow
+        # Vercel deploys the pushed commit asynchronously. Wait for the key
+        # file to go live before submitting, then fall back to the sitemap if
+        # the API is temporarily unavailable.
+        run: |
+          KEY="ec36b8feed381bb69fbb20f9b59a2249"
+          KEY_LOCATION="https://chordplane.citcs.site/${KEY}.txt"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "$KEY_LOCATION" > /dev/null; then break; fi
+            sleep 20
+          done
+          curl -sS -X POST "https://api.indexnow.org/indexnow" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d "{
+              \"host\": \"chordplane.citcs.site\",
+              \"key\": \"${KEY}\",
+              \"keyLocation\": \"${KEY_LOCATION}\",
+              \"urlList\": [
+                \"https://chordplane.citcs.site/\",
+                \"https://chordplane.citcs.site/download/\",
+                \"https://chordplane.citcs.site/privacy/\",
+                \"https://chordplane.citcs.site/terms/\",
+                \"https://chordplane.citcs.site/offline-guitar-chords/\",
+                \"https://chordplane.citcs.site/chordpro-reader/\",
+                \"https://chordplane.citcs.site/transpose-chords/\",
+                \"https://chordplane.citcs.site/setlist-sharing/\",
+                \"https://chordplane.citcs.site/ukulele-chords/\"
+              ]
+            }" || echo "IndexNow submission failed; sitemap.xml remains the source of truth."

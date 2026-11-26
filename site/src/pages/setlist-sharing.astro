@@ -1,0 +1,164 @@
+---
+import Base from '../layouts/Base.astro';
+import Screenshot from '../components/Screenshot.astro';
+import share from '../assets/screenshots/share-setlist.png';
+import shareDark from '../assets/screenshots/share-setlist-dark.png';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What does ChordPlane share with bandmates?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Only the song or set list you choose. Your full library and saved songs remain on your device.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can I share a setlist without an account?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. QR codes, .cpl files and in-app import links work without an account. An account is only needed for managed cloud links you can revoke later.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can a shared setlist be updated or revoked?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Managed cloud links can be updated and revoked from My shared links. Recipients always receive a snapshot of the set at the time it was shared.',
+      },
+    },
+  ],
+};
+---
+
+<Base
+  title="Share a setlist with your band by QR code or link | ChordPlane"
+  description="Send a running order to bandmates as a QR code, link or .cpl file. Your library stays on your device. Download ChordPlane for Android."
+  jsonLd={jsonLd}
+>
+  <section class="wrap hero">
+    <div class="hero-inner">
+      <p class="screen-kicker">Setlist sharing</p>
+      <h1>Send the set, not your whole library.</h1>
+      <p class="lede">
+        ChordPlane shares the running order you built: the songs, their keys,
+        capo notes and position in the set. Your library, favorites and
+        unpublished work stay on the phone.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="#options">Sharing options</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap import-section" id="options" aria-labelledby="share-options-title">
+    <div class="import-copy">
+      <h2 id="share-options-title">Three ways to hand over a set</h2>
+      <p style="margin-top: 14px; color: var(--ink-soft)">
+        Pick the option that fits the room. All three carry the same portable
+        bundle; only the transport changes.
+      </p>
+      <ul class="import-list">
+        <li><strong>QR code</strong> for a quick scan at the venue</li>
+        <li><strong>Link</strong> for a band chat or a text message</li>
+        <li><strong>.cpl file</strong> for an offline handoff</li>
+      </ul>
+      <a class="text-link" href="/offline-guitar-chords/">Back to offline chords →</a>
+    </div>
+    <div class="import-sheet">
+      <Screenshot
+        src={share}
+        darkSrc={shareDark}
+        alt="Share sheet for a setlist with QR code and link options"
+      />
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="what-title">
+    <div class="section-head">
+      <h2 id="what-title">What the other person receives</h2>
+      <p>
+        A shared set is a snapshot, not a live window into somebody else's
+        device.
+      </p>
+    </div>
+    <div class="feature-grid">
+      <article>
+        <h3>The songs in the set</h3>
+        <p>
+          Titles, artists, chord sources, keys, capo and tempo travel with the
+          bundle so the receiving phone shows the same sheet.
+        </p>
+      </article>
+      <article>
+        <h3>The running order</h3>
+        <p>
+          Positions are preserved. Bandmates open the set in the order you
+          intend to play it, without rebuilding anything.
+        </p>
+      </article>
+      <article>
+        <h3>Your library stays yours</h3>
+        <p>
+          Favorites, drafts, other setlists and unpublished songs are never
+          part of the export.
+        </p>
+      </article>
+      <article>
+        <h3>Import is one tap</h3>
+        <p>
+          Scanning or opening a link brings the set into ChordPlane. Matching
+          songs are reused instead of duplicated.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="share-faq-title">
+    <div class="section-head">
+      <h2 id="share-faq-title">Sharing questions</h2>
+    </div>
+    <ul class="points">
+      <li>
+        <h3>What does ChordPlane share with bandmates?</h3>
+        <p>
+          Only the song or set list you choose. The rest of your library is not
+          part of the bundle.
+        </p>
+      </li>
+      <li>
+        <h3>Can I share without an account?</h3>
+        <p>
+          Yes. QR codes, files and basic links work as a guest. Managed cloud
+          links that can be revoked need an account.
+        </p>
+      </li>
+      <li>
+        <h3>Can a shared setlist be updated or revoked?</h3>
+        <p>
+          Managed cloud links can be updated and revoked later. Recipients see
+          the snapshot you published.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="wrap" style="padding-block: clamp(44px, 6vw, 80px)">
+    <div class="get-card">
+      <div>
+        <h2>Get everyone on the same page.</h2>
+        <p>Build a set, share it, and keep the parts of your library you never meant to send.</p>
+      </div>
+      <div class="get-actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="/transpose-chords/">Transpose a song first</a>
+      </div>
+    </div>
+  </section>
+</Base>

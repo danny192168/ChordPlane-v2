@@ -1,0 +1,165 @@
+---
+import Base from '../layouts/Base.astro';
+import Screenshot from '../components/Screenshot.astro';
+import diagrams from '../assets/screenshots/diagrams.png';
+import diagramsDark from '../assets/screenshots/diagrams-dark.png';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Does ChordPlane show ukulele chord diagrams?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Tap any chord in a song to see guitar or ukulele voicings. The diagrams are drawn on the device and work offline.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can I switch an existing song from guitar to ukulele?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. The instrument is a setting, so the same chord sheet can show ukulele shapes without changing the stored song.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Does transposing work with ukulele chords?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Transposing moves the chord labels and the ukulele diagrams together, so the new shapes are ready to play.',
+      },
+    },
+  ],
+};
+---
+
+<Base
+  title="Offline ukulele chord app for Android | ChordPlane"
+  description="Read ukulele chords offline on Android. Tap any chord for local diagrams, transpose into any key and keep songs on your device."
+  jsonLd={jsonLd}
+>
+  <section class="wrap hero">
+    <div class="hero-inner">
+      <p class="screen-kicker">Ukulele chords</p>
+      <h1>Ukulele shapes, ready before the strum.</h1>
+      <p class="lede">
+        ChordPlane keeps ukulele chord sheets on the device and draws the
+        voicings locally. Switch the instrument and the same song shows uke
+        shapes instead of guitar ones — no downloads, no account, no wait.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="#diagrams">See the diagrams</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap import-section" id="diagrams" aria-labelledby="uke-diagrams-title">
+    <div class="import-copy">
+      <h2 id="uke-diagrams-title">Tap a chord, see the fingering</h2>
+      <p style="margin-top: 14px; color: var(--ink-soft)">
+        The chord sheet is the primary view. When a shape is unclear, tap the
+        chord chip and a voicing sheet opens with finger positions for the
+        selected instrument.
+      </p>
+      <ul class="import-list">
+        <li>Guitar and ukulele voicings from the same chord label</li>
+        <li>Diagrams rendered locally, with no image server</li>
+        <li>Works in airplane mode</li>
+        <li>Large, readable shapes at any text size</li>
+      </ul>
+      <a class="text-link" href="/offline-guitar-chords/">The offline story →</a>
+    </div>
+    <div class="import-sheet">
+      <Screenshot
+        src={diagrams}
+        darkSrc={diagramsDark}
+        alt="Chord diagrams listed for a song in ChordPlane"
+      />
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="uke-use-title">
+    <div class="section-head">
+      <h2 id="uke-use-title">Built for small sessions</h2>
+      <p>
+        Ukulele players often need one song, one shape and one more verse. The
+        interface stays out of the way.
+      </p>
+    </div>
+    <div class="feature-grid">
+      <article>
+        <h3>One tap to the shape</h3>
+        <p>
+          Chord chips in the sheet are tappable. The voicing sheet opens over
+          the song and closes when you are ready to play.
+        </p>
+      </article>
+      <article>
+        <h3>Keys that fit a higher voice</h3>
+        <p>
+          Transpose up or down and the ukulele diagrams follow. The capo hint
+          stays visible for players who mix the two.
+        </p>
+      </article>
+      <article>
+        <h3>Paste what you already have</h3>
+        <p>
+          Bracketed chords, plain chord rows and ChordPro sections all import.
+          There is no separate ukulele-only file format.
+        </p>
+      </article>
+      <article>
+        <h3>Setlists for the song circle</h3>
+        <p>
+          Arrange the running order and share it with the group. Only the set
+          you choose is sent, never your whole library.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="uke-faq-title">
+    <div class="section-head">
+      <h2 id="uke-faq-title">Ukulele questions</h2>
+    </div>
+    <ul class="points">
+      <li>
+        <h3>Does ChordPlane show ukulele chord diagrams?</h3>
+        <p>
+          Yes. Tap any chord to see guitar or ukulele voicings, drawn on the
+          device.
+        </p>
+      </li>
+      <li>
+        <h3>Can I switch an existing song to ukulele?</h3>
+        <p>
+          Yes. The instrument is a setting, so one stored sheet can serve both
+          instruments.
+        </p>
+      </li>
+      <li>
+        <h3>Does transposing work with ukulele chords?</h3>
+        <p>
+          Yes. Chord labels and ukulele diagrams move together to the new key.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="wrap" style="padding-block: clamp(44px, 6vw, 80px)">
+    <div class="get-card">
+      <div>
+        <h2>Bring the uke songs offline.</h2>
+        <p>Install the APK and paste your first chord sheet.</p>
+      </div>
+      <div class="get-actions">
+        <a class="btn btn-primary" href="/download/">Download for Android</a>
+        <a class="btn btn-quiet" href="/chordpro-reader/">Import ChordPro</a>
+      </div>
+    </div>
+  </section>
+</Base>
