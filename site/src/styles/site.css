@@ -296,6 +296,12 @@ p {
 /* Theme switch: a rounded track with a squircle knob that carries a sun that
    rotates into a moon. No glow, no gradient. */
 .theme-switch {
+  --switch-width: 52px;
+  --switch-height: 34px;
+  --switch-knob: 26px;
+  --switch-inset: 3px;
+  --switch-border: 1px;
+
   display: inline-flex;
   align-items: center;
   padding: 0;
@@ -304,26 +310,32 @@ p {
   cursor: pointer;
 }
 
+.theme-switch:focus-visible {
+  outline: 2px solid var(--accent-light);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
 .switch-track {
   position: relative;
   display: block;
-  width: 52px;
-  height: 34px;
-  border: 1px solid var(--line-strong);
+  width: var(--switch-width);
+  height: var(--switch-height);
+  border: var(--switch-border) solid var(--line-strong);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--ink) 9%, var(--paper));
+  background: light-dark(rgba(23, 27, 31, 0.09), rgba(237, 241, 243, 0.09));
   transition: background-color 160ms ease, border-color 160ms ease;
 }
 
 .switch-knob {
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: var(--switch-inset);
+  left: var(--switch-inset);
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: var(--switch-knob);
+  height: var(--switch-knob);
+  border-radius: 6px;
   background: var(--ink);
   color: var(--paper);
   transition: transform 190ms cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -332,6 +344,8 @@ p {
 
 .switch-knob svg {
   position: absolute;
+  inset: 0;
+  margin: auto;
   width: 14px;
   height: 14px;
   transition: opacity 140ms ease, transform 190ms ease;
@@ -344,11 +358,20 @@ p {
 
 .theme-switch[data-mode='dark'] .switch-track {
   background: var(--accent-wash);
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  border-color: var(--accent);
 }
 
 .theme-switch[data-mode='dark'] .switch-knob {
-  transform: translateX(21px);
+  /* Absolute offsets start at the padding edge, so subtract both borders:
+     52 - 2(1) - 26 - 2(3) = 18. */
+  transform: translateX(
+    calc(
+      var(--switch-width) -
+      2 * var(--switch-border) -
+      var(--switch-knob) -
+      2 * var(--switch-inset)
+    )
+  );
   background: var(--accent);
   color: #080a10;
 }
@@ -361,6 +384,14 @@ p {
 .theme-switch[data-mode='dark'] .icon-moon {
   opacity: 1;
   transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch-track,
+  .switch-knob,
+  .switch-knob svg {
+    transition: none;
+  }
 }
 
 @media (max-width: 620px) {

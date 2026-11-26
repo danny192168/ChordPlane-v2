@@ -81,6 +81,12 @@ const path = Astro.url.pathname;
     paint();
   });
 
-  query.addEventListener('change', paint);
+  try {
+    query.addEventListener('change', paint);
+  } catch (_) {
+    // Older Safari exposes only the deprecated addListener API. Without this
+    // fallback paint() would never run and the switch would look stuck.
+    query.addListener(paint);
+  }
   paint();
 </script>
