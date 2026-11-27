@@ -2,10 +2,16 @@ import 'package:chord_diagrams/chord_diagrams.dart' show Instrument;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/auth/auth_gateway.dart';
+import '../../core/auth/google_auth.dart';
 import '../../core/chords/chord_detection.dart';
 import '../../core/config/app_config.dart';
 import '../../core/settings/settings.dart';
+import '../community/data/community_providers.dart';
+import '../sharing/cloud/auth_gate_sheet.dart';
+import '../songs/data/song_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -15,6 +21,18 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsProvider.notifier);
     final theme = Theme.of(context);
+    final signedIn =
+        ref.watch(signedInProvider).value ??
+        ref.read(authGatewayProvider).isSignedIn;
+    final profile = ref.watch(profileInfoProvider).value;
+    final localName = ref.watch(profileNameProvider).trim();
+    final accountName =
+        profile?.displayName.trim().isNotEmpty == true
+        ? profile!.displayName.trim()
+        : localName.isNotEmpty
+        ? localName
+        : 'ChordPlane account';
+    final accountHandle = profile?.username.trim() ?? '';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -206,6 +224,37 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
+          const _SectionLabel('Account'),
+          _Card(
+            child: Column(
+              children: [
+                if (signedIn) ...[
+                  ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(accountName),
+                    subtitle: accountHandle.isEmpty
+                        ? const Text('Signed in')
+                        : Text('@$accountHandle'),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.logout, color: theme.colorScheme.error),
+                    title: Text(
+                      'Sign out',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                    onTap: () => _signOut(context, ref),
+                  ),
+                ] else
+                  ListTile(
+                    leading: const Icon(Icons.login),
+                    title: const Text('Sign in'),
+                    subtitle: const Text('Publish songs and sync favorites'),
+                    onTap: () => showSignInGate(context),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           const _SectionLabel('About'),
           _Card(
             child: const Column(
@@ -213,7 +262,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: Icon(Icons.piano_outlined),
                   title: Text('ChordPlane'),
-                  subtitle: Text('Version 1.2.0 · local-first songbook'),
+                  subtitle: Text('Version 1.3.0 · local-first songbook'),
                 ),
               ],
             ),
@@ -221,6 +270,19 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    final cloudReady =
+        AppConfig.hasSupabase && AppConfig.supabaseInitError == null;
+    if (cloudReady) {
+      await Supabase.instance.client.auth.signOut();
+      await const GoogleAuth().signOut();
+    }
+    if (!context.mounted) return;
+    ref.invalidate(profileInfoProvider);
+    ref.invalidate(myUploadsProvider);
+    context.go('/');
   }
 }
 
@@ -260,7 +322,9 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: scheme.outlineVariant),
       ),
-      child: child,
+      // Tiles need their own ink surface: the decorated container would
+      // otherwise paint over their splash and fail the ListTile assertion.
+      child: Material(type: MaterialType.transparency, child: child),
     );
   }
 }

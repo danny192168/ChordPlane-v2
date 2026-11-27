@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/community/presentation/community_song_screen.dart';
 import '../features/library/library_screen.dart';
+import '../features/library/published_library_screen.dart';
 import '../features/library/favorites_screen.dart';
 import '../features/library/saved_screen.dart';
 import '../features/live/presentation/live_setlist_screen.dart';
@@ -97,6 +98,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) =>
             SongViewerScreen(songId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/published',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const PublishedLibraryScreen(),
       ),
       GoRoute(
         path: '/community/:id',

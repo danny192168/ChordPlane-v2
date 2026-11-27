@@ -26,7 +26,6 @@ class SongTile extends ConsumerWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
-      leading: _SongGlyph(title: song.title),
       title: Text(
         song.title,
         maxLines: 1,
@@ -93,35 +92,6 @@ class SongTile extends ConsumerWidget {
               ),
             )
           : null,
-    );
-  }
-}
-
-class _SongGlyph extends StatelessWidget {
-  const _SongGlyph({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final letter = title.trim().isEmpty ? '?' : title.trim()[0].toUpperCase();
-    return Container(
-      width: 44,
-      height: 44,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        letter,
-        style: TextStyle(
-          color: scheme.onPrimaryContainer,
-          fontWeight: FontWeight.w800,
-          fontSize: 17,
-        ),
-      ),
     );
   }
 }

@@ -131,10 +131,33 @@ class ChordSource {
   );
 
   /// Bare-chord scanner used inside lyric text. Requires the chord to be a
-  /// standalone word so it never fires inside other words.
+  /// standalone word so it never fires inside other words. Hyphens are word
+  /// boundaries too for this purpose: a `D` in `D---D-DU` is strum notation,
+  /// not a chord, and must not be wrapped as `[D]`.
   static final RegExp _bareChord = RegExp(
-    '(?<![A-Za-z0-9])([A-G][#b♯♭]?$_suffix)(?![A-Za-z0-9])',
+    '(?<![A-Za-z0-9-])([A-G][#b♯♭]?$_suffix)(?![A-Za-z0-9-])',
   );
+
+  /// A labelled performance note such as `Strumming pattern:` or `Rhythm:`.
+  /// The note itself should never be scanned for chords; only the notation
+  /// after the colon is checked below.
+  static final RegExp _patternPrefix = RegExp(
+    r'^\s*(?:strum(?:ming)?|picking|finger\s*picking|rhythm|pattern)\b[^:]{0,30}:',
+    caseSensitive: false,
+  );
+
+  /// Strum symbols: down/up strokes, holds and bar separators.
+  static final RegExp _strumNotation = RegExp(r'^[DUduXx\-\s|]+$');
+
+  /// Whether [line] is a labelled strum/picking pattern rather than lyric
+  /// text. The hyphen boundary on [_bareChord] handles glued notation; this
+  /// also covers spaced forms like `Strum: D - D - U`.
+  static bool _isStrumNotationLine(String line) {
+    final prefix = _patternPrefix.firstMatch(line);
+    if (prefix == null) return false;
+    final notation = line.substring(prefix.end).trim();
+    return notation.isNotEmpty && _strumNotation.hasMatch(notation);
+  }
 
   /// Common English words that are also valid chord names and appear in
   /// lyrics far more often as words than as chords.
@@ -684,7 +707,10 @@ class ChordSource {
   /// `{...}` spans). Tab lines are left untouched — their string letters
   /// (`B|`, `G|`…) are not chords.
   static String _inlineChords(String line, {required bool detectBare}) {
-    if (!detectBare || _isTabLine(line) || !_bareChord.hasMatch(line)) {
+    if (!detectBare ||
+        _isTabLine(line) ||
+        _isStrumNotationLine(line) ||
+        !_bareChord.hasMatch(line)) {
       return line;
     }
 

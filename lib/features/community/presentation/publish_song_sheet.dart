@@ -6,8 +6,11 @@ import '../../../core/auth/auth_gateway.dart';
 import '../../../core/db/app_database.dart';
 import '../../sharing/cpl.dart';
 import '../../sharing/cloud/auth_gate_sheet.dart';
+import '../../songs/data/song_providers.dart';
 import '../../songs/data/song_repository.dart';
 import '../data/community_api.dart';
+import '../data/community_providers.dart';
+import '../data/published_feed.dart';
 import 'username_sheet.dart';
 
 /// Explicit publish step. Creating or editing a song never publishes it by
@@ -206,6 +209,10 @@ class _PublishSheetState extends ConsumerState<_PublishSheet> {
           anonymous: _anonymous,
         );
       }
+      ref.invalidate(myUploadsProvider);
+      ref.invalidate(myPublishedCountProvider);
+      ref.invalidate(publishedFeedProvider);
+      ref.invalidate(recentPublishedProvider);
       if (!mounted) return;
       Navigator.pop(context, true);
     } on CommunityException catch (error) {

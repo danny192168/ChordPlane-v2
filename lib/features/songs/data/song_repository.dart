@@ -33,6 +33,15 @@ class SongListItem {
   final bool isFavorite;
 }
 
+/// A favorited song together with the moment it was hearted, so profile lists
+/// can show a meaningful age rather than the song's last edit time.
+class FavoriteItem {
+  const FavoriteItem({required this.song, required this.favoritedAt});
+
+  final SongRow song;
+  final DateTime favoritedAt;
+}
+
 class ArtistSummary {
   const ArtistSummary({
     required this.name,
@@ -81,6 +90,27 @@ class SongRepository {
   final AppDatabase db;
   final String userId;
   final CommunityApi? communityApi;
+
+  /// Favorites newest-first, with the date each one was added. This is the
+  /// profile's Favorites panel; the tab's favourites use alphabetical order.
+  Stream<List<FavoriteItem>> watchFavoriteItems() {
+    final query = db.select(db.favorites).join([
+      innerJoin(db.songs, db.songs.id.equalsExp(db.favorites.songId)),
+    ]);
+    query.where(
+      db.favorites.userId.equals(userId) & db.songs.deletedAt.isNull(),
+    );
+    query.orderBy([OrderingTerm.desc(db.favorites.createdAt)]);
+    return query.watch().map(
+      (rows) => [
+        for (final row in rows)
+          FavoriteItem(
+            song: row.readTable(db.songs),
+            favoritedAt: row.readTable(db.favorites).createdAt,
+          ),
+      ],
+    );
+  }
 
   Stream<List<SongListItem>> watchLibrary({bool favoritesOnly = false}) {
     final query = db.select(db.songs).join([
@@ -447,7 +477,11 @@ class SongRepository {
     return saved;
   }
 
-  Future<List<CommunitySong>> cachedCommunitySongs(String query) async {
+  Future<List<CommunitySong>> cachedCommunitySongs(
+    String query, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     final term = query.trim().toLowerCase();
     final select = db.select(db.songs);
     select.where(
@@ -468,7 +502,21 @@ class SongRepository {
           ..orderBy([
             (t) => OrderingTerm.desc(t.createdAt),
           ])
-          ..limit(50))
+          ..limit(limit, offset: offset))
+        .get();
+    return [for (final row in rows) _communitySong(row)];
+  }
+
+  /// Published copies kept on this device, used as the offline fallback for
+  /// the profile's Published panel. Background search cache never qualifies.
+  Future<List<CommunitySong>> cachedUploads() async {
+    final rows = await (db.select(db.songs)..where(
+          (t) =>
+              t.deletedAt.isNull() &
+              t.remoteId.isNotNull() &
+              t.visibility.equals('community'),
+        )
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .get();
     return [for (final row in rows) _communitySong(row)];
   }

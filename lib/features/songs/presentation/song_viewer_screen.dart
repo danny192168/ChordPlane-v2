@@ -14,6 +14,8 @@ import '../../../core/db/app_database.dart';
 import '../../../core/settings/settings.dart';
 import '../../../core/config/app_config.dart';
 import '../../community/data/community_api.dart';
+import '../../community/data/community_providers.dart';
+import '../../community/data/published_feed.dart';
 import '../../community/presentation/publish_song_sheet.dart';
 import '../../sharing/share_service.dart';
 import '../../sharing/share_sheet.dart';
@@ -789,6 +791,10 @@ class _SongViewerScreenState extends ConsumerState<SongViewerScreen>
           await ref.read(songRepositoryProvider).clearPublished(song.id);
           if (!mounted) return;
           ref.invalidate(songProvider(song.id));
+          ref.invalidate(myUploadsProvider);
+          ref.invalidate(myPublishedCountProvider);
+          ref.invalidate(publishedFeedProvider);
+          ref.invalidate(recentPublishedProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Removed from the community')),
           );

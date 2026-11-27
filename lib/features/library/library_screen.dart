@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../shared/widgets/profile_avatar_button.dart';
 import '../../shared/widgets/song_tile.dart';
 import '../community/data/community_api.dart';
+import 'widgets/published_song_card.dart';
 import '../songs/data/song_providers.dart';
 import '../songs/data/song_repository.dart';
 
@@ -42,7 +43,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final bootstrap = ref.watch(appBootstrapProvider);
     final query = ref.watch(searchQueryProvider).trim();
     final view = ref.watch(searchViewProvider);
-    final recent = ref.watch(savedSongsProvider);
     final published = ref.watch(recentPublishedProvider);
 
     return Scaffold(
@@ -102,19 +102,23 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
           ),
         ],
-        body: ListView(
-          padding: const EdgeInsets.only(bottom: 110),
-          children: [
-            if (bootstrap.isLoading)
-              const Padding(
-                padding: EdgeInsets.only(top: 100),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (query.isEmpty)
-              _buildRecent(context, recent, published)
-            else
-              _buildSearch(context, view),
-          ],
+        body: RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 110),
+            children: [
+              if (bootstrap.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(top: 100),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (query.isEmpty)
+                _buildPublished(context, published)
+              else
+                _buildSearch(context, view),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -126,80 +130,67 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
-  Widget _buildRecent(
+  /// Pull-to-refresh reloads the small slice of the shared catalog shown on
+  /// the Library home. The saved shelf lives in its own tab.
+  Future<void> _refresh() async {
+    ref.invalidate(recentPublishedProvider);
+    await ref.read(recentPublishedProvider.future);
+  }
+
+  Future<void> _openPublished(
     BuildContext context,
-    AsyncValue<List<SongListItem>> recent,
-    AsyncValue<List<CommunitySong>> published,
-  ) {
-    return recent.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.only(top: 100),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (error, stack) => SongListEmpty(
-        title: 'Could not load your library',
-        message: '$error',
-      ),
-      data: (items) {
-        final shown = items.take(12).toList();
-        final known = <String>{
-          for (final item in items) if (item.song.remoteId != null)
-            item.song.remoteId!,
-        };
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _sectionTitle('Recently saved'),
-            if (shown.isEmpty)
-              SongListEmpty(
-                title: 'Your songbook is empty',
-                message:
-                    'Write a song with chords and lyrics, or search above to '
-                    'find something to save.',
-                action: FilledButton.icon(
-                  onPressed: () => context.push('/editor'),
-                  icon: const Icon(Icons.add),
-                  label: const Text('New song'),
-                ),
-              )
-            else ...[
-              for (final item in shown)
-                SongTile(
-                  item: item,
-                  onTap: () => context.push('/song/${item.song.id}'),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: OutlinedButton.icon(
-                  onPressed: () => context.go('/saved'),
-                  icon: const Icon(Icons.bookmark_outline),
-                  label: const Text('See all saved songs'),
-                ),
-              ),
-            ],
-            _buildPublished(context, published, known),
-          ],
-        );
-      },
-    );
+    CommunitySong song,
+  ) async {
+    final id = await ref
+        .read(songRepositoryProvider)
+        .cacheCommunitySong(song);
+    if (id == null || !context.mounted) return;
+    context.push('/song/$id');
   }
 
   Widget _buildPublished(
     BuildContext context,
     AsyncValue<List<CommunitySong>> published,
-    Set<String> known,
   ) {
-    final songs = published.value
-        ?.where((song) => !known.contains(song.id))
-        .take(5)
-        .toList();
-    if (songs == null || songs.isEmpty) return const SizedBox.shrink();
+    final songs = published.value?.take(5).toList();
+    if (songs == null || songs.isEmpty) {
+      return SongListEmpty(
+        title: 'Nothing published yet',
+        message: 'Songs shared by the community will appear here.',
+        action: FilledButton.icon(
+          onPressed: () => context.push('/editor'),
+          icon: const Icon(Icons.add),
+          label: const Text('New song'),
+        ),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _sectionTitle('Recently published'),
+        Row(
+          children: [
+            Expanded(child: _sectionTitle('Recently published')),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: TextButton(
+                onPressed: () => context.push('/published'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('See all'),
+                    SizedBox(width: 2),
+                    Icon(Icons.chevron_right, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
         for (final song in songs)
-          _SearchSongTile(result: SearchSongResult.online(song)),
+          PublishedSongCard(
+            song: song,
+            onTap: () => _openPublished(context, song),
+          ),
         const SizedBox(height: 24),
       ],
     );
@@ -280,7 +271,6 @@ class _SearchSongTile extends ConsumerWidget {
     final online = result.online!;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
-      leading: _SongGlyph(title: online.title),
       title: Text(
         online.title,
         maxLines: 1,
@@ -320,16 +310,6 @@ class _SearchArtistTile extends StatelessWidget {
             : '/artist/${Uri.encodeComponent(artist.slug)}';
         context.push(path);
       },
-      leading: CircleAvatar(
-        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-        child: Text(
-          artist.name.isEmpty ? '?' : artist.name[0].toUpperCase(),
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: Theme.of(context).colorScheme.onSecondaryContainer,
-          ),
-        ),
-      ),
       title: Text(
         artist.name,
         maxLines: 1,
@@ -344,30 +324,3 @@ class _SearchArtistTile extends StatelessWidget {
   }
 }
 
-class _SongGlyph extends StatelessWidget {
-  const _SongGlyph({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: 44,
-      height: 44,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        title.trim().isEmpty ? '?' : title.trim()[0].toUpperCase(),
-        style: TextStyle(
-          color: scheme.onPrimaryContainer,
-          fontWeight: FontWeight.w800,
-          fontSize: 17,
-        ),
-      ),
-    );
-  }
-}

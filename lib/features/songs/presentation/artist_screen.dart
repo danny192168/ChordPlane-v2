@@ -71,33 +71,12 @@ class ArtistScreen extends ConsumerWidget {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                            child: Text(
-                              items.first.song.artist.trim().isEmpty
-                                  ? '?'
-                                  : items.first.song.artist
-                                        .trim()[0]
-                                        .toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: theme.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Text(
-                            '${items.length} ${items.length == 1 ? 'song' : 'songs'}',
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        '${items.length} ${items.length == 1 ? 'song' : 'songs'}',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -105,7 +84,7 @@ class ArtistScreen extends ConsumerWidget {
                     itemCount: items.length,
                     separatorBuilder: (_, _) => Divider(
                       height: 1,
-                      indent: 72,
+                      indent: 16,
                       endIndent: 16,
                       color: theme.colorScheme.outlineVariant,
                     ),

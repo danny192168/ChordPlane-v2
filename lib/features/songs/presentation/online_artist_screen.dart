@@ -67,13 +67,12 @@ class OnlineArtistScreen extends ConsumerWidget {
             itemCount: songs.length,
             separatorBuilder: (_, _) => Divider(
               height: 1,
-              indent: 72,
+              indent: 16,
               color: Theme.of(context).colorScheme.outlineVariant,
             ),
             itemBuilder: (context, index) {
               final song = songs[index];
               return ListTile(
-                leading: _SongGlyph(title: song.title),
                 title: Text(
                   song.title,
                   maxLines: 1,
@@ -120,30 +119,4 @@ class OnlineArtistScreen extends ConsumerWidget {
   }
 }
 
-class _SongGlyph extends StatelessWidget {
-  const _SongGlyph({required this.title});
 
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: 44,
-      height: 44,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        title.trim().isEmpty ? '?' : title.trim()[0].toUpperCase(),
-        style: TextStyle(
-          color: scheme.onPrimaryContainer,
-          fontWeight: FontWeight.w800,
-          fontSize: 17,
-        ),
-      ),
-    );
-  }
-}

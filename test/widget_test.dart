@@ -136,6 +136,29 @@ void main() {
       expect(document.chords, ['G', 'Am7']);
     });
 
+    test('leaves strumming patterns untouched in auto mode', () {
+      const pattern = 'Strumming pattern: D---D-DU-UD-D-DU';
+      expect(ChordSource.normalize(pattern), pattern);
+      final document = build(pattern, mode: ChordDetectionMode.auto);
+      expect(document.chords, isEmpty);
+    });
+
+    test('leaves spaced strum and rhythm notes untouched', () {
+      const strum = 'Strum: D - D - U';
+      expect(ChordSource.normalize(strum), strum);
+      const rhythm = 'Rhythm pattern: D-DU-UDU';
+      expect(ChordSource.normalize(rhythm), rhythm);
+      final document = build('$strum\n$rhythm', mode: ChordDetectionMode.auto);
+      expect(document.chords, isEmpty);
+    });
+
+    test('does not treat chords glued to hyphens as bare chords', () {
+      const line = 'Play D---G---Am here';
+      expect(ChordSource.normalize(line), line);
+      final document = build(line, mode: ChordDetectionMode.auto);
+      expect(document.chords, isEmpty);
+    });
+
     test('does not treat the word A as a bare chord', () {
       final document = build(
         'I am A man of constant sorrow',

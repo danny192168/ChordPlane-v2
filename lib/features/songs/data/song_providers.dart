@@ -12,6 +12,7 @@ import '../../../core/demo/demo_songs.dart';
 import '../../../core/settings/settings.dart';
 import '../../../core/db/app_database.dart';
 import '../../community/data/community_api.dart';
+import '../../community/data/community_providers.dart';
 import '../../setlists/data/setlist_repository.dart';
 import 'song_repository.dart';
 
@@ -46,6 +47,12 @@ final mySongsProvider = StreamProvider<List<SongListItem>>((ref) {
 
 final favoriteSongsProvider = StreamProvider<List<SongListItem>>((ref) {
   return ref.watch(songRepositoryProvider).watchLibrary(favoritesOnly: true);
+});
+
+/// Favorites for the profile panel, newest heart first, with the date they
+/// were added so the list can show a relative age.
+final favoriteItemsProvider = StreamProvider<List<FavoriteItem>>((ref) {
+  return ref.watch(songRepositoryProvider).watchFavoriteItems();
 });
 
 /// Artists derived from favorited songs only. Used by the Favorites tab.
@@ -355,15 +362,17 @@ final recentPublishedProvider = FutureProvider<List<CommunitySong>>((ref) async 
   }
   if (!ref.watch(isOnlineProvider)) return cached();
   try {
+    // Only five are needed here; the full chronological list lives on its
+    // own paginated screen reached from the section's See all button.
     final songs = await ref
         .read(communityApiProvider)
-        .search('')
+        .publishedPage(offset: 0, limit: 5)
         .timeout(const Duration(seconds: 6));
     await repository.cacheCommunitySongs(
-      songs.take(20).toList(),
+      songs,
       downloadState: 'cached',
     );
-    return songs.take(5).toList();
+    return songs;
   } catch (_) {
     return cached();
   }
@@ -427,6 +436,7 @@ final favoritesSyncProvider = FutureProvider<void>((ref) async {
   await ref.read(songRepositoryProvider).syncFavorites();
   ref.invalidate(favoriteSongsProvider);
   ref.invalidate(favoriteArtistsProvider);
+  ref.invalidate(favoriteItemsProvider);
 });
 
 /// Profile name is kept locally too, so guest mode and offline launches still
@@ -450,6 +460,21 @@ class ProfileNameController extends Notifier<String> {
 final profileNameProvider = NotifierProvider<ProfileNameController, String>(
   ProfileNameController.new,
 );
+
+/// Published count for the Profile tab label. Shares the exact list request
+/// used by the panel, so the number and the list can never disagree.
+final myPublishedCountProvider = FutureProvider<int>((ref) async {
+  ref.watch(currentUserIdProvider);
+  final signedIn =
+      ref.watch(signedInProvider).value ??
+      ref.read(authGatewayProvider).isSignedIn;
+  if (!signedIn) return 0;
+  try {
+    return (await ref.watch(myUploadsProvider.future)).length;
+  } catch (_) {
+    return 0;
+  }
+});
 
 final profileInfoProvider = FutureProvider<ProfileInfo>((ref) async {
   final localName = ref.watch(profileNameProvider);

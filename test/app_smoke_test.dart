@@ -175,7 +175,7 @@ void main() {
 
     phoneViewport(tester);
     await tester.pumpWidget(wrapRouted());
-    await pumpUntil(tester, find.text('RECENTLY SAVED'));
+    await pumpUntil(tester, find.byType(TextField));
 
     // Search is song-first, with a separate artist section underneath.
     await tester.enterText(find.byType(TextField), 'Solo Artist');
@@ -323,7 +323,7 @@ void main() {
         ),
       ),
     );
-    await pumpUntil(tester, find.text('Profile'));
+    await pumpUntil(tester, find.byIcon(Icons.settings_outlined));
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await pumpUntil(tester, find.text('Settings'));
     expect(find.byType(BackButton), findsOneWidget);

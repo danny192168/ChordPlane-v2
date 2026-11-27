@@ -44,6 +44,7 @@ class CommunitySong {
     required this.createdAt,
     required this.ratingSum,
     required this.ratingCount,
+    this.moderationStatus = 'published',
   });
 
   factory CommunitySong.fromJson(Map<String, dynamic> json) {
@@ -74,6 +75,8 @@ class CommunitySong {
           DateTime.fromMillisecondsSinceEpoch(0),
       ratingSum: (json['rating_sum'] as int?) ?? 0,
       ratingCount: (json['rating_count'] as int?) ?? 0,
+      moderationStatus:
+          (json['moderation_status'] as String?) ?? 'published',
     );
   }
 
@@ -94,6 +97,10 @@ class CommunitySong {
   final DateTime createdAt;
   final int ratingSum;
   final int ratingCount;
+
+  /// `published`, `pending` or `removed`. Owners can still see pending rows;
+  /// removed rows are hidden from the published list.
+  final String moderationStatus;
 
   String get credit => anonymous
       ? 'Anonymous'
@@ -204,6 +211,13 @@ abstract interface class CommunityApi {
 
   /// Downloads the whole published catalog in pages for offline storage.
   Future<List<CommunitySong>> downloadAll();
+
+  /// One chronological page of the public catalog, newest first. Used by the
+  /// Library's "See all" list so it can load more as the user scrolls.
+  Future<List<CommunitySong>> publishedPage({
+    int offset = 0,
+    int limit = 30,
+  });
 
   Future<List<CommunitySong>> myUploads();
 
@@ -317,15 +331,50 @@ class SupabaseCommunityApi implements CommunityApi {
   }
 
   @override
-  Future<List<CommunitySong>> myUploads() async {
+  Future<List<CommunitySong>> publishedPage({
+    int offset = 0,
+    int limit = 30,
+  }) async {
     try {
       final rows = await _client
           .from('community_songs')
           .select(_columns)
-          .eq('owner', _client.auth.currentUser?.id ?? '')
+          .eq('moderation_status', 'published')
           .order('created_at', ascending: false)
-          .limit(50);
+          .range(offset, offset + limit - 1);
       return [for (final row in rows) CommunitySong.fromJson(row)];
+    } on PostgrestException catch (error) {
+      await _fail(error);
+    }
+  }
+
+  @override
+  Future<List<CommunitySong>> myUploads() async {
+    final owner = _client.auth.currentUser?.id;
+    if (owner == null) return const <CommunitySong>[];
+
+    // A profile page promises *all* uploads, so page through the catalog
+    // instead of showing only the newest 50. The page cap keeps a broken or
+    // hostile response from turning into an endless request loop.
+    const pageSize = 200;
+    const maxPages = 25;
+    final songs = <CommunitySong>[];
+    var start = 0;
+    try {
+      for (var page = 0; page < maxPages; page++) {
+        final rows = await _client
+            .from('community_songs')
+            .select(_columns)
+            .eq('owner', owner)
+            .neq('moderation_status', 'removed')
+            .order('created_at', ascending: false)
+            .range(start, start + pageSize - 1);
+        final batch = [for (final row in rows) CommunitySong.fromJson(row)];
+        songs.addAll(batch);
+        if (batch.length < pageSize) break;
+        start += pageSize;
+      }
+      return songs;
     } on PostgrestException catch (error) {
       await _fail(error);
     }
